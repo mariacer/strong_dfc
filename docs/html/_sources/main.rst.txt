@@ -1,0 +1,21 @@
+.. _main-reference-label:
+
+Main script to run experiments
+******************************
+
+.. contents::
+
+.. automodule:: main
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Reproducibility
+***************
+
+To reproduce results from the papers you can use the following configurations.
+
+
+.. include:: ../../dfc/EXPERIMENTS.rst
+    :start-after: content-inclusion-marker-do-not-remove

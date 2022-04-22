@@ -1,0 +1,1028 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils.args &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.args</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :utils/args.py</span>
+<span class="c1"># @author         :am</span>
+<span class="c1"># @contact        :ameulema@ethz.ch</span>
+<span class="c1"># @created        :25/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.6.8</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Command line argument parsing</span>
+<span class="sd">-----------------------------</span>
+
+<span class="sd">Command-line arguments common to all experiments.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">hypnettorch.utils.cli_args</span> <span class="k">as</span> <span class="nn">cli</span>
+<span class="kn">from</span> <span class="nn">hypnettorch.utils</span> <span class="k">import</span> <span class="n">misc</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<div class="viewcode-block" id="parse_cmd_arguments"><a class="viewcode-back" href="../../utils.html#utils.args.parse_cmd_arguments">[docs]</a><span class="k">def</span> <span class="nf">parse_cmd_arguments</span><span class="p">(</span><span class="n">network_type</span><span class="o">=</span><span class="s1">&#39;BP&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">argv</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse command-line arguments.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        network_type (str): The network type to be used.</span>
+<span class="sd">        default (optional): If ``True``, command-line arguments will be ignored</span>
+<span class="sd">            and only the default values will be parsed.</span>
+<span class="sd">        argv (optional): If provided, it will be treated as a list of command-</span>
+<span class="sd">            line argument that is passed to the parser in place of sys.argv.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The Namespace object containing argument names and values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">curr_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">_%H-%M-%S&#39;</span><span class="p">)</span>
+    <span class="n">dout_dir</span> <span class="o">=</span> <span class="s1">&#39;./out/run_&#39;</span> <span class="o">+</span> <span class="n">curr_date</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+
+    <span class="c1">#################</span>
+    <span class="c1">### Arguments ###</span>
+    <span class="c1">#################</span>
+
+    <span class="n">misc_agroup</span> <span class="o">=</span> <span class="n">cli</span><span class="o">.</span><span class="n">miscellaneous_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">big_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                         <span class="n">dout_dir</span><span class="o">=</span><span class="n">dout_dir</span><span class="p">)</span>
+    <span class="n">miscellaneous_args</span><span class="p">(</span><span class="n">misc_agroup</span><span class="p">)</span>
+    <span class="n">tgroup</span> <span class="o">=</span> <span class="n">training_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">network_type</span><span class="p">)</span>
+    <span class="n">optimizer_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">)</span>
+    <span class="n">dataset_args</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="n">student_teacher_args</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="n">network_args</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span><span class="p">:</span>
+        <span class="n">optimizer_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;_fb&#39;</span><span class="p">,</span> <span class="n">dweight_decay</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">dmomentum</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">doptimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">dfc_args</span><span class="p">(</span><span class="n">parser</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+        <span class="n">optimizer_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;_fb&#39;</span><span class="p">,</span> <span class="n">dweight_decay</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">dmomentum</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">doptimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">dfc_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">single_phase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1">##################################</span>
+    <span class="c1">### Finish-up Argument Parsing ###</span>
+    <span class="c1">##################################</span>
+    <span class="c1"># Including all necessary sanity checks.</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">default</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Provided &quot;argv&quot; will be ignored since &quot;default&quot; &#39;</span> <span class="o">+</span>
+                          <span class="s1">&#39;option was turned on.&#39;</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">argv</span>
+    <span class="k">if</span> <span class="n">default</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1">### Post-process arguments.</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">post_process_args</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">)</span>
+
+    <span class="c1">### Check argument values.</span>
+    <span class="n">check_invalid_args_general</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+<div class="viewcode-block" id="training_args"><a class="viewcode-back" href="../../utils.html#utils.args.training_args">[docs]</a><span class="k">def</span> <span class="nf">training_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span> <span class="n">depochs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dbatch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+                  <span class="n">dclip_grad_norm</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add arguments to the training argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        (....): Default values for the arguments.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The created argument group, in case more options should be added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Training options&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epochs&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">depochs</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of training epochs. &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--batch_size&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dbatch_size</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Training batch size. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--clip_grad_norm&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dclip_grad_norm</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Clip the norm of the forward and feedback weight &#39;</span>
+                             <span class="s1">&#39;updates if they are bigger than the specified &#39;</span> 
+                             <span class="s1">&#39;value.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--min_acc&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The minimal accuracy that needs to be achieved &#39;</span>
+                             <span class="s1">&#39;by the end of epoch 3 for the run to not be &#39;</span>
+                             <span class="s1">&#39;killed.&#39;</span><span class="p">)</span>
+    <span class="n">aux</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span><span class="p">:</span>
+        <span class="n">aux</span> <span class="o">=</span><span class="s1">&#39; forward&#39;</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--freeze_fw_weights&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Freeze the </span><span class="si">%s</span><span class="s1">weights during training.&#39;</span> <span class="o">%</span> <span class="n">aux</span> <span class="o">+</span> 
+                             <span class="s1">&#39;Note that the epochs are still run through, &#39;</span>
+                             <span class="s1">&#39;only the weight updates are not performed.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Options to train only part of the network.</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;BP&#39;</span><span class="p">:</span>
+        <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--only_train_first_layer&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Only train the forward parameters of first &#39;</span>
+                                 <span class="s1">&#39;layer, while freezing all other forward &#39;</span>
+                                 <span class="s1">&#39;parameters to their initialization. The &#39;</span>
+                                 <span class="s1">&#39;feedback parameters are all trained.&#39;</span><span class="p">)</span>
+        <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--only_train_last_layer&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Train only the parameters of the last layer &#39;</span>
+                                 <span class="s1">&#39;and let the others stay fixed. This is used &#39;</span>
+                                 <span class="s1">&#39;as a backprop baseline.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tgroup</span></div>
+
+<div class="viewcode-block" id="optimizer_args"><a class="viewcode-back" href="../../utils.html#utils.args.optimizer_args">[docs]</a><span class="k">def</span> <span class="nf">optimizer_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">dlr</span><span class="o">=</span><span class="s1">&#39;0.1&#39;</span><span class="p">,</span> <span class="n">dmomentum</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dweight_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                   <span class="n">doptimizer</span><span class="o">=</span><span class="s1">&#39;SGD&#39;</span><span class="p">,</span> <span class="n">dbeta1</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">dbeta2</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">depsilon</span><span class="o">=</span><span class="s1">&#39;1e-8&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Optimizer options.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">        suffix (str): The suffix to be added to the arguments. Can be emtpy,</span>
+<span class="sd">            or `_fb` for the feedback weights in DFC. </span>
+<span class="sd">        (....): Default values for the arguments.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The created argument group, in case more options should be added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Some helpers to make this function work for forward and feedback weights.</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;forward&#39;</span>
+    <span class="n">explanation</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">aux</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s1">&#39;_fb&#39;</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;feedback&#39;</span>
+        <span class="n">explanation</span> <span class="o">=</span> <span class="s1">&#39; for the feedback parameters&#39;</span>
+        <span class="n">aux</span> <span class="o">=</span> <span class="s1">&#39; If no value is provided, this value will be set to be &#39;</span> <span class="o">+</span> \
+              <span class="s1">&#39;identical to that of the forward weights.&#39;</span>
+
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dlr</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Learning rate of optimizer for the </span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="o">+</span>
+                             <span class="s1">&#39;parameters. You can either provide a single &#39;</span>
+                             <span class="s1">&#39;float that will be used as lr for all the layers,&#39;</span>
+                             <span class="s1">&#39;or a list of learning rates (e.g. [0.1,0.2,0.5]) &#39;</span>
+                             <span class="s1">&#39;specifying a lr for each layer. The length of the&#39;</span>
+                             <span class="s1">&#39; list should be equal to num_hidden + 1. The list&#39;</span>
+                             <span class="s1">&#39;may not contain spaces. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--optimizer</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">doptimizer</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;SGD&#39;</span><span class="p">,</span> <span class="s1">&#39;RMSprop&#39;</span><span class="p">,</span> <span class="s1">&#39;Adam&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optimizer used for training the </span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="o">+</span> 
+                             <span class="s1">&#39;parameters. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--momentum</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dmomentum</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Momentum of the SGD or RMSprop </span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="o">+</span>
+                             <span class="s1">&#39;optimizer.</span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="n">aux</span> <span class="o">+</span> <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--weight_decay</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dweight_decay</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Weight decay for the </span><span class="si">%s</span><span class="s1"> weights. &#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Adam optimizer options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--adam_beta1</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dbeta1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Adam beta1 value</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">explanation</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--adam_beta2</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dbeta2</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Adam beta2 value</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">explanation</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--adam_epsilon</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">depsilon</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Adam epsilon value</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">explanation</span> <span class="o">+</span>
+                             <span class="s1">&#39;You can either provide a &#39;</span>
+                             <span class="s1">&#39;single float that will be used for all the &#39;</span>
+                             <span class="s1">&#39;layers, or a list of specifying a value for each &#39;</span>
+                             <span class="s1">&#39;layer. The length of the list should be equal &#39;</span>
+                             <span class="s1">&#39;to num_hidden + 1. The list may not contain &#39;</span>
+                             <span class="s1">&#39;spaces. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tgroup</span></div>
+
+
+<div class="viewcode-block" id="dataset_args"><a class="viewcode-back" href="../../utils.html#utils.args.dataset_args">[docs]</a><span class="k">def</span> <span class="nf">dataset_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">ddataset</span><span class="o">=</span><span class="s1">&#39;mnist&#39;</span><span class="p">,</span> <span class="n">dtarget_class_value</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add arguments to the dataset argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Dataset options&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--dataset&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">ddataset</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mnist&#39;</span><span class="p">,</span> <span class="s1">&#39;fashion_mnist&#39;</span><span class="p">,</span> <span class="s1">&#39;mnist_autoencoder&#39;</span><span class="p">,</span>
+                                 <span class="s1">&#39;cifar10&#39;</span><span class="p">,</span> <span class="s1">&#39;student_teacher&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Dataset to use for experiments. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no_val_set&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that no validation set is used&#39;</span>
+                             <span class="s1">&#39;during training.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--target_class_value&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dtarget_class_value</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;For classification tasks, the value that the &#39;</span>
+                             <span class="s1">&#39;correct class should have. Values of 1 &#39;</span>
+                             <span class="s1">&#39;correspond to one-hot-encoding, and values &#39;</span>
+                             <span class="s1">&#39;smaller than one correspond to soft targets. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">dgroup</span></div>
+
+<div class="viewcode-block" id="student_teacher_args"><a class="viewcode-back" href="../../utils.html#utils.args.student_teacher_args">[docs]</a><span class="k">def</span> <span class="nf">student_teacher_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">dnum_train</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">dnum_val</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                         <span class="n">dnum_test</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">dteacher_n_in</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">dteacher_n_out</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                         <span class="n">dteacher_size_hidden</span><span class="o">=</span><span class="s1">&#39;5&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add arguments to the student-teacher argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Student-teacher dataset options&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_num_train&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dnum_train</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of training samples used for the &#39;</span>
+                             <span class="s1">&#39;student teacher regression. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_num_test&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dnum_test</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of test samples used for the &#39;</span>
+                             <span class="s1">&#39;student teacher regression. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_num_val&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dnum_val</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of validation samples used for the&#39;</span>
+                             <span class="s1">&#39;student teacher regression. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_n_in&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dteacher_n_in</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Dimensionality of the inputs. &#39;</span> <span class="o">+</span> 
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_n_out&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dteacher_n_out</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Dimensionality of the outputs. &#39;</span> <span class="o">+</span> 
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_size_hidden&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dteacher_size_hidden</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of units in each hidden layer of the &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;(teacher) network. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span>
+                             <span class="s1">&#39;If you provide a list, you can have layers of &#39;</span>
+                             <span class="s1">&#39;different sizes (width).&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--teacher_linear&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that the student-teacher dataset &#39;</span>
+                             <span class="s1">&#39;is created with a linear teacher.&#39;</span><span class="p">)</span>
+    <span class="n">dgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--data_random_seed&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The random seed for generating the data.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="miscellaneous_args"><a class="viewcode-back" href="../../utils.html#utils.args.miscellaneous_args">[docs]</a><span class="k">def</span> <span class="nf">miscellaneous_args</span><span class="p">(</span><span class="n">mgroup</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add arguments to the miscellaneous argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mgroup: The argument group returned by method</span>
+<span class="sd">            :func:`utils.cli_args.miscellaneous_args`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--double_precision&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Use double precision floats (64bits) instead of &#39;</span>
+                             <span class="s1">&#39;32bit floats. This slows up training, but can&#39;</span>
+                             <span class="s1">&#39;help with numerical issues.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--test&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;If active, this option will ensure that the &#39;</span>
+                             <span class="s1">&#39;simulation is very fast by cutting the number &#39;</span>
+                             <span class="s1">&#39;of epochs to 1, and by using only a couple of &#39;</span>
+                             <span class="s1">&#39;batches. This can be used for debugging.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Logging and writing.</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no_plots&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;If activated, no plots will be generated &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;(not even for the writer). This can be &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;useful to save time, e.g. for a &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;hyperparameter search.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_checkpoints&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;If active, networks will be stored after &#39;</span>
+                             <span class="s1">&#39;pre-training (if existing) and during training.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--checkpoint_interval&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Every how many epochs to checkpoint the models.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--pretrained_net_dir&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The path to the pre-trained network to be &#39;</span>
+                             <span class="s1">&#39;loaded.&#39;</span><span class="p">)</span>
+    <span class="n">mgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epoch_summary_interval&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Every how many epochs should a different &#39;</span>
+                             <span class="s1">&#39;summary file be stored.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="network_args"><a class="viewcode-back" href="../../utils.html#utils.args.network_args">[docs]</a><span class="k">def</span> <span class="nf">network_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">dsize_hidden</span><span class="o">=</span><span class="s1">&#39;5&#39;</span><span class="p">,</span> <span class="n">dhidden_activation</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                 <span class="n">dinitialization</span><span class="o">=</span><span class="s1">&#39;xavier_normal&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add arguments to the network argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">        (....): Default values for the arguments.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The created argument group, in case more options should be added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Network options&#39;</span><span class="p">)</span>
+    <span class="n">sgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--size_hidden&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;N&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dsize_hidden</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of units in each hidden layer of the &#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;(student) network. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span>
+                             <span class="s1">&#39;If you provide a list, you can have layers of &#39;</span>
+                             <span class="s1">&#39;different sizes (width).&#39;</span><span class="p">)</span>
+    <span class="n">sgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--hidden_activation&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dhidden_activation</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Activation function used for the hidden layers. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">sgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--no_bias&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag for not using biases in the network.&#39;</span><span class="p">)</span>
+    <span class="n">sgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--initialization&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dinitialization</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">,</span> <span class="s1">&#39;xavier&#39;</span><span class="p">,</span> <span class="s1">&#39;xavier_normal&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Type of initialization that will be used for &#39;</span>
+                             <span class="s1">&#39;forward (and feedback, if not DFC) weights of &#39;</span>
+                             <span class="s1">&#39;the network. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="dfc_args"><a class="viewcode-back" href="../../utils.html#utils.args.dfc_args">[docs]</a><span class="k">def</span> <span class="nf">dfc_args</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">dinit_fb_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="n">dsigma_init</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dextra_fb_epochs</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+             <span class="n">dtarget_stepsize</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">depsilon_di</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dtau_f</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+             <span class="n">dtau_noise</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">single_phase</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is a helper function of the function :func:`parse_cmd_arguments` to</span>
+<span class="sd">    add DFC arguments to the training argument group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser (argparse.ArgumentParser): Argument parser.</span>
+<span class="sd">        (....): Default values for the arguments.</span>
+<span class="sd">        single_phase (bool): Whether we are doing DFC with a single phase.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The created argument group, in case more options should be added.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tgroup</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Deep Feedback Control options&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Dynamics options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--ss&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="c1"># old &quot;grad_delta_v&quot; arg</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Only update feedforward weights after steady &#39;</span>
+                             <span class="s1">&#39;state.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--ssa&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="c1"># old &quot;ndi&quot; argument</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Only update feedforward weights after steady &#39;</span>
+                              <span class="s1">&#39;state computed analytically. This speeds up &#39;</span>
+                              <span class="s1">&#39;computation assuming convergence.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--noisy_dynamics&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether the dynamics of the &#39;</span>
+                             <span class="s1">&#39;system when learning the forward weights should &#39;</span>
+                             <span class="s1">&#39;be corrupted slightly with white noise with std &#39;</span>
+                             <span class="s1">&#39;&quot;sigma&quot;.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--low_pass_filter_noise&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Low-pass filter the controller noise &#39;</span>
+                             <span class="s1">&#39;when &quot;noisy_dynamics&quot; is active.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tau_noise&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dtau_noise</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Time constant of exponential filter for noise.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Output target options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--strong_feedback&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Whether the outputs should be clamped to their &#39;</span>
+                             <span class="s1">&#39;desired values instead of being nudged towards &#39;</span>
+                             <span class="s1">&#39;lower loss values.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--target_stepsize&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dtarget_stepsize</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Step size for computing the nudeged output &#39;</span>
+                             <span class="s1">&#39;target based on the output gradient. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--error_as_loss_grad&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Compute the error e(t) as the gradient of the &#39;</span>
+                             <span class="s1">&#39;loss with respect to the output activations, &#39;</span>
+                             <span class="s1">&#39;instead of always using e(t) = r_L* - r_L(t). &#39;</span>
+                             <span class="s1">&#39;This option does not change anything when using &#39;</span>
+                             <span class="s1">&#39;MSE errors (since both are equivalent), but &#39;</span>
+                             <span class="s1">&#39;has an impact in classification tasks. &#39;</span>
+                             <span class="s1">&#39;Currently this option is only supported if the &#39;</span>
+                             <span class="s1">&#39;`--strong_feedback` flag is set.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Initialization of feedback weights.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--initialization_fb&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;xavier_normal&#39;</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">,</span> <span class="s1">&#39;xavier&#39;</span><span class="p">,</span> <span class="s1">&#39;xavier_normal&#39;</span><span class="p">,</span> 
+                                 <span class="s1">&#39;weight_product&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Type of initialization that will be used for &#39;</span>
+                             <span class="s1">&#39;feedback weights of the network. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--sigma_init&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dsigma_init</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Standard deviation of gaussian noise used to &#39;</span>
+                             <span class="s1">&#39;corrupt the feedback initialization whenever &#39;</span>
+                             <span class="s1">&#39;`--initialization_fb=weight_product`. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span> <span class="c1"># old noise_K</span>
+
+    <span class="c1">### Training of the forward weights options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--normalize_lr&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that we should take the real &#39;</span>
+                             <span class="s1">&#39;learning rate of the forward parameters to be:&#39;</span>
+                             <span class="s1">&#39;lr=lr/target_stepsize. This makes the hpsearch&#39;</span>
+                             <span class="s1">&#39;easier, as lr and target_stepsize have similar&#39;</span>
+                             <span class="s1">&#39;behavior.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--learning_rule&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;nonlinear_difference&#39;</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;nonlinear_difference&#39;</span><span class="p">,</span> <span class="s1">&#39;voltage_difference&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Type of learning rule used to train the &#39;</span>
+                             <span class="s1">&#39;forward weights. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Pre-training of feedback weights options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--init_fb_epochs&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dinit_fb_epochs</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of pre-training epochs for the feedback &#39;</span>
+                             <span class="s1">&#39;weights. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_fb_init&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Learning rate for pre-training feedback weights. &#39;</span>
+                             <span class="s1">&#39;If ``None`` is provided, then &quot;lr_fb&quot; will be &#39;</span>
+                             <span class="s1">&#39;used. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--pretrain_without_controller&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;If active, the feedback weight pretraining &#39;</span>
+                             <span class="s1">&#39;will use the forward activations without &#39;</span>
+                             <span class="s1">&#39;controller active as a desired target. Only has &#39;</span>
+                             <span class="s1">&#39;an effect when using &quot;DFC_single_phase&quot;, &#39;</span>
+                             <span class="s1">&#39;since by default in this setting the actual &#39;</span>
+                             <span class="s1">&#39;supervised labels are used as targets.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Training of feedback weights options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--freeze_fb_weights&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Only train the forward parameters, and keep the &#39;</span>
+                             <span class="s1">&#39;feedback parameters fixed.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--freeze_fb_weights_output&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Freeze the feedback weights of the output layer.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--extra_fb_epochs&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dextra_fb_epochs</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of extra epochs that the feedback &#39;</span>
+                             <span class="s1">&#39;weights will be trained for after every &#39;</span>
+                             <span class="s1">&#39;epoch of forward parameter training. &#39;</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>   
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--scaling_fb_updates&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether the feedback weight &#39;</span>
+                             <span class="s1">&#39;gradients are layerwise scalled before the &#39;</span>
+                             <span class="s1">&#39;update if performed.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Convergence arguments.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--include_only_converged_samples&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Only include samples in the mini-batch that &#39;</span>
+                             <span class="s1">&#39;converged to do the update.  If noisy_dynamics&#39;</span>
+                             <span class="s1">&#39;is used, this flag should be ``False``, as the &#39;</span>
+                             <span class="s1">&#39;noise prevents the samples from converging &#39;</span>
+                             <span class="s1">&#39;exactly.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epsilon_di&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">depsilon_di</span><span class="p">,</span>
+                         <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Constant to check for convergence. Helps avoid &#39;</span>
+                              <span class="s1">&#39;spurious minima, but setting it too low &#39;</span>
+                              <span class="s1">&#39;(&lt;0.2) can lead to slower computation (as some &#39;</span>
+                              <span class="s1">&#39;error minima will not be detected as such). &#39;</span>
+                              <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dfc_controller_args</span><span class="p">(</span><span class="n">gp</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">dsigma</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span> <span class="n">dtmax_di</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> 
+                            <span class="n">dalpha_di</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">dk_p</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">dtime_constant_ratio</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                            <span class="n">dapical_time_constant</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">ddt_di</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                            <span class="n">single_phase</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add controller arguments to DFC argument group.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gp: The DFC parser group.</span>
+<span class="sd">            suffix (str): The suffix to be added to the arguments. Can be emtpy,</span>
+<span class="sd">                or `_fb` for the feedback weights. Note that in single-phase</span>
+<span class="sd">                settings, the &#39;fb&#39; options are only used for the pretraining.</span>
+<span class="sd">                During normal training, the same dynamics as in the forward pass</span>
+<span class="sd">                are used.</span>
+<span class="sd">            single_phase (bool): Whether we are working with a single phase.</span>
+<span class="sd">                If True, only the arguments `k_p_fb` and `alpha_di_fb` will</span>
+<span class="sd">                be created, as these are important for the single-phase</span>
+<span class="sd">                pretraining.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># In the feedback setting, many default values are set to -1.</span>
+        <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s1">&#39;_fb&#39;</span><span class="p">:</span>
+            <span class="n">dtime_constant_ratio</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">dtmax_di</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">ddt_di</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">dapical_time_constant</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">dsigma</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">dk_p</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">dalpha_di</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+        <span class="c1"># Some helpers to make function work for forward and feedback weights.</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;forward&#39;</span>
+        <span class="n">exp</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">training</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s1">&#39;_fb&#39;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;feedback&#39;</span>
+            <span class="k">if</span> <span class="n">single_phase</span><span class="p">:</span>
+                <span class="n">training</span> <span class="o">=</span> <span class="s1">&#39;pre-&#39;</span>
+        <span class="n">exp</span> <span class="o">=</span> <span class="s1">&#39;when </span><span class="si">%s</span><span class="s1">training the </span><span class="si">%s</span><span class="s1"> weights&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">training</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+
+        <span class="c1"># Temporal dynamics.</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--dt_di</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">ddt_di</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Time step for Euler steps, to compute the &#39;</span>
+                             <span class="s1">&#39;dynamical inversion of targets </span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;Larger values lead to faster convergence &#39;</span>
+                             <span class="s1">&#39;(specially if used with fast DI), but dt&gt;0.5 &#39;</span>
+                             <span class="s1">&#39;can lead to unstable, non-convergent &#39;</span>
+                             <span class="s1">&#39;dynamics. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tmax_di</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dtmax_di</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Maximum number of iterations (timesteps) &#39;</span>
+                             <span class="s1">&#39;performed in dynamical inversion of targets &#39;</span>
+                             <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span> <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--inst_transmission</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that we assume an &#39;</span>
+                             <span class="s1">&#39;instantaneous transmission between layers &#39;</span>
+                             <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">. In this setting, in one &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;simulation iteration, the basal voltage of &#39;</span>
+                             <span class="s1">&#39;layer i at timestep t is based on the &#39;</span>
+                             <span class="s1">&#39;forward propagation of the somatic &#39;</span>
+                             <span class="s1">&#39;voltage of layer i-1 at timestep t, hence &#39;</span>
+                             <span class="s1">&#39;already incorporating the feedback of the &#39;</span>
+                             <span class="s1">&#39;previous layer at the current timestep.&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Time constants.</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--time_constant_ratio</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="n">dtime_constant_ratio</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Ratio of the time constant of the voltage &#39;</span>
+                             <span class="s1">&#39;dynamics w.r.t. the controller dynamics &#39;</span>
+                             <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span><span class="p">)</span>
+        
+        <span class="c1"># Miscellaneous.</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--sigma</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dsigma</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Standard deviation of gaussian noise used to &#39;</span>
+                             <span class="s1">&#39;corrupt the layer activations during the &#39;</span>
+                             <span class="s1">&#39;controller dynamics </span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--sigma_output</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Standard deviation of gaussian noise used to &#39;</span>
+                             <span class="s1">&#39;corrupt the output activations during the &#39;</span>
+                             <span class="s1">&#39;controller dynamics </span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--alpha_di</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dalpha_di</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Leakage gain of the feedback controller &#39;</span>
+                             <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">. It stabilize the dynamics. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+        <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--k_p</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dk_p</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The gain factor of the proportional control &#39;</span>
+                             <span class="s1">&#39;term of the PI controller </span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                             <span class="s1">&#39;When equal to zero, the proportional &#39;</span>
+                             <span class="s1">&#39;control term is omitted and only integral &#39;</span>
+                             <span class="s1">&#39;control is used. Only positive values allowed &#39;</span>
+                             <span class="s1">&#39;for k_p. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">single_phase</span><span class="p">:</span>
+            <span class="c1"># In single-phase settings, the apical dynamics are instantaneous</span>
+            <span class="c1"># and hence require no time constants.</span>
+            <span class="n">gp</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--apical_time_constant</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">suffix</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                            <span class="n">default</span><span class="o">=</span><span class="n">dapical_time_constant</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Time constant of the apical compartment &#39;</span>
+                                 <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">. &#39;</span> <span class="o">%</span> <span class="n">exp</span> <span class="o">+</span>
+                                 <span class="s1">&#39;By default it will be set equal to &#39;</span>
+                                 <span class="s1">&#39;&quot;dt_di</span><span class="si">%s</span><span class="s1">&quot;, such that it results &#39;</span> <span class="o">%</span> <span class="n">suffix</span> <span class="o">+</span>
+                                 <span class="s1">&#39;in instantaneous apical compartment &#39;</span>
+                                 <span class="s1">&#39;dynamics. Default: </span><span class="si">%(default)s</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Controller options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--inst_system_dynamics&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that the system dynamics, i.e.&#39;</span>
+                             <span class="s1">&#39;the dynamics of the somatic compartments, should&#39;</span>
+                             <span class="s1">&#39;be approximated by their instantaneous &#39;</span>
+                             <span class="s1">&#39;counterparts, i.e. equivalent to having a &#39;</span>
+                             <span class="s1">&#39;time constant of lim -&gt; 0.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--proactive_controller&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Use a slight variation on the forward Euler &#39;</span>
+                             <span class="s1">&#39;method for simulating the controller dynamics &#39;</span>
+                             <span class="s1">&#39;during the learning of the forward weights, &#39;</span>
+                             <span class="s1">&#39;such that the control input u[k+1] (which &#39;</span>
+                             <span class="s1">&#39;incorporates the control error e[k]) is used to &#39;</span>
+                             <span class="s1">&#39;compute the apical compartment voltage v^A[k+1], &#39;</span>
+                             <span class="s1">&#39;instead of using u[k].&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--low_pass_filter_u&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Low-pass filter the controller signal u &#39;</span>
+                             <span class="s1">&#39;to be used in the neuronal dynamics.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tau_f&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dtau_f</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Time constant of exponential filter for &#39;</span>
+                             <span class="s1">&#39;voltage and controller, applied if &#39;</span>
+                             <span class="s1">&#39;&quot;low_pass_filter_u&quot; is active.&#39;</span><span class="p">)</span>
+    <span class="c1"># Controller for forward weight learning.</span>
+    <span class="n">dfc_controller_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">)</span>
+    <span class="c1"># Controller for feedback weight learning.</span>
+    <span class="n">dfc_controller_args</span><span class="p">(</span><span class="n">tgroup</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;_fb&#39;</span><span class="p">,</span> <span class="n">dsigma</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dalpha_di</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                        <span class="n">dtmax_di</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dk_p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtime_constant_ratio</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                        <span class="n">ddt_di</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">single_phase</span><span class="o">=</span><span class="n">single_phase</span><span class="p">)</span>
+
+    <span class="c1">### Debugger options.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_bp_updates&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Overwrite the updates with the loss gradients &#39;</span>
+                             <span class="s1">&#39;(BP updates) when learning the forward weights. &#39;</span>
+                             <span class="s1">&#39;The network is trained with backpropagation , &#39;</span>
+                             <span class="s1">&#39;but still instantiated as DFC. This can be &#39;</span>
+                             <span class="s1">&#39;useful for debugging purposes.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_jacobian_as_fb&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Use the Jacobian as the feedback weights to &#39;</span>
+                             <span class="s1">&#39;control the network.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--compute_jacobian_at&#39;</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ss&#39;</span><span class="p">,</span> <span class="s1">&#39;average_ss&#39;</span><span class="p">,</span> <span class="s1">&#39;full_trajectory&#39;</span><span class="p">],</span>
+                        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;ss&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;How to compute the Jacobian, either at the &#39;</span>
+                             <span class="s1">&#39;steady-state (ss), the average steady-state &#39;</span>
+                             <span class="s1">&#39;in the last quarter of the simulartion &#39;</span>
+                             <span class="s1">&#39;(average-ss) or across the entire trajectory.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--compare_with_ndi&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;When doing dynamical control, also compute &#39;</span>
+                             <span class="s1">&#39;the analytical solution in order to compare &#39;</span>
+                             <span class="s1">&#39;both solutions. Causes a computational overhead.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_df&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that the computed angles should&#39;</span>
+                             <span class="s1">&#39;be saved in dataframes for later use/plotting.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_fb_statistics_init&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating that the statistics of the &#39;</span>
+                             <span class="s1">&#39;feedback weights should be saved during the &#39;</span>
+                             <span class="s1">&#39;initial training of the feedback weights.&#39;</span><span class="p">)</span>
+    <span class="c1">### Angle calculations.</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_ndi_angle&#39;</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether angle with the &#39;</span>
+                             <span class="s1">&#39;analytical updates should be computed. Causes a &#39;</span>
+                             <span class="s1">&#39;minor increase in computational load.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_bp_angle&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether the BP updates and the&#39;</span>
+                             <span class="s1">&#39;angle between those updates and DFC updates &#39;</span>
+                             <span class="s1">&#39;should be computed and saved.&#39;</span><span class="p">)</span>    
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_H_angle&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether angle with the ideal &#39;</span>
+                             <span class="s1">&#39;updates from loss_u should be computed. Warning, &#39;</span>
+                             <span class="s1">&#39;this causes a heavy extra computational load.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_lu_loss&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating to save help minimization loss.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_ratio_ff_fb&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether ratio between the &#39;</span>
+                             <span class="s1">&#39;feeforward and feedback stimulus should be &#39;</span>
+                             <span class="s1">&#39;saved.&#39;</span><span class="p">)</span>
+    <span class="n">tgroup</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--save_condition_fb&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag indicating whether the Gauss-Newton &#39;</span>
+                             <span class="s1">&#39;condition on the feedback weights should be &#39;</span>
+                             <span class="s1">&#39;computed and saved.&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tgroup</span></div>
+
+<div class="viewcode-block" id="post_process_args"><a class="viewcode-back" href="../../utils.html#utils.args.post_process_args">[docs]</a><span class="k">def</span> <span class="nf">post_process_args</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Post process the command line arguments.</span>
+
+<span class="sd">    Which kind of stuff is post-processed here for all runs?</span>
+<span class="sd">        - reduce number of epochs if we are in a `test` setting</span>
+<span class="sd">        - convert string into lists (for architecture, learning rates)</span>
+
+<span class="sd">    Which kind of stuff is post-processed here for DFC runs?</span>
+<span class="sd">        - adjust learning rate based on target nudging strength if needed</span>
+<span class="sd">        - copy forward phase hyperparameters for feedback phase if not provided</span>
+<span class="sd">        - fill in possibly missing arguments for:</span>
+<span class="sd">            * lr_fb_init &lt;- lr_fb</span>
+<span class="sd">            * sigma_output &lt;- sigma</span>
+<span class="sd">            * sigma_output_fb &lt;- sigma_fb</span>
+<span class="sd">            * apical_time_constant &lt;- dt_di</span>
+<span class="sd">            * apical_time_constant_fb &lt;- dt_di_fb</span>
+<span class="sd">        - remove feedback training if Jacobian is used as feedback.</span>
+<span class="sd">        - determine whether dataframe should be stored.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config: Parsed command-line arguments.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The post-processed config.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Reduce number of epochs if we are in a `test` setting</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">test</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">epochs</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Process lists of architectures and learning rates.</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">size_hidden</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_ints</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">size_hidden</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">teacher_size_hidden</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_ints</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">teacher_size_hidden</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_floats</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_floats</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span>
+
+    <span class="c1"># DFC arguments.</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">or</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+
+        <span class="c1"># Reduce number of epochs if we are in a `test` setting</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">test</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">init_fb_epochs</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">extra_fb_epochs</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Process lists learning rates.</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">lr_fb</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_floats</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr_fb</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon_fb</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_floats</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon_fb</span><span class="p">)</span>
+
+        <span class="c1"># Adjust learning rate based on target nudging strength.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">normalize_lr</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">lr</span> <span class="o">=</span> <span class="p">[</span><span class="n">lr</span><span class="o">/</span><span class="n">config</span><span class="o">.</span><span class="n">target_stepsize</span> <span class="k">for</span> <span class="n">lr</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">]</span>
+
+        <span class="c1"># Copy forward phase hyperparameters for feedback phase if not provided</span>
+        <span class="k">def</span> <span class="nf">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;For backward weight phase learning arguments that are -1, we set</span>
+<span class="sd">            the values to be equal to those for learning the forward weights.&quot;&quot;&quot;</span>
+            <span class="n">fb_value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">arg</span> <span class="o">+</span> <span class="s1">&#39;_fb&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fb_value</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">fb_value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">fb_value</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">arg</span> <span class="o">+</span> <span class="s1">&#39;_fb&#39;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">arg</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">config</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;optimizer&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;lr&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;momentum&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;k_p&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;dt_di&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;time_constant_ratio&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;tmax_di&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;inst_transmission&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">set_arg_equal_to_wake_phase</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;sigma&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Fill in possibly missing arguments.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">lr_fb_init</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">lr_fb_init</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">lr_fb</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">lr_fb_init</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">str_to_floats</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr_fb_init</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_output</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">sigma_output</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_output_fb</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">sigma_output_fb</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_fb</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;apical_time_constant&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                                        <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;apical_time_constant_fb&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                                        <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant_fb</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant_fb</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di_fb</span>
+
+        <span class="c1"># Remove feedback training if Jacobian is used as feedback.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">use_jacobian_as_fb</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">init_fb_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">extra_fb_epochs</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Determine whether dataframe should be stored.</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_ndi_angle</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">save_bp_angle</span> <span class="ow">or</span> \
+                <span class="n">config</span><span class="o">.</span><span class="n">save_H_angle</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">save_lu_loss</span> <span class="ow">or</span> \
+                <span class="n">config</span><span class="o">.</span><span class="n">save_ratio_ff_fb</span>  <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">save_condition_fb</span><span class="p">:</span>
+           <span class="n">config</span><span class="o">.</span><span class="n">save_df</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="check_dfc_time_constants"><a class="viewcode-back" href="../../utils.html#utils.args.check_dfc_time_constants">[docs]</a><span class="k">def</span> <span class="nf">check_dfc_time_constants</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Check the time constants for DFC runs.</span>
+
+<span class="sd">    We need to ensure :math:`\delta_t \inf \inf \tau_v , \tau_{\epsilon} \\</span>
+<span class="sd">    \inf \inf \tau_f \inf \inf \tau_u = 1`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config: The config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The (potentially modified) config.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;tau_f&quot; must be smaller than &quot;tau_u&quot;, which &#39;</span>
+                         <span class="s1">&#39;is chosen to be equal to 1.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_noise</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;tau_noise&quot; for exponential filtering must be &#39;</span>
+                      <span class="s1">&#39;smaller than &quot;tau_f&quot;. Setting it to &quot;tau_f&quot;.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">tau_noise</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;time_constant_ratio&quot; must be &#39;</span>
+                      <span class="s1">&#39;smaller than &quot;tau_f&quot;. Setting it to &quot;tau_f&quot;.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;time_constant_ratio_fb&quot; must be &#39;</span>
+                      <span class="s1">&#39;smaller than &quot;tau_f&quot;. Setting it to &quot;tau_f&quot;.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;dt_di&quot; must be smaller than &quot;time_constant_ratio&quot;. &#39;</span>
+                      <span class="s1">&#39;Setting it to &quot;time_constant_ratio&quot; to &#39;</span>
+                      <span class="s1">&#39;avoid instabilities.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">dt_di</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di_fb</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;dt_di_fb&quot; must be smaller than &#39;</span>
+                      <span class="s1">&#39;&quot;time_constant_ratio_fb&quot;. Setting it to &#39;</span>
+                      <span class="s1">&#39;&quot;time_constant_ratio_fb&quot; to avoid instabilities.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">dt_di_fb</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span>
+
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="check_invalid_args_general"><a class="viewcode-back" href="../../utils.html#utils.args.check_invalid_args_general">[docs]</a><span class="k">def</span> <span class="nf">check_invalid_args_general</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sanity check for command-line arguments.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config: Parsed command-line arguments.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;clip_grad_norm&quot; has to be positive.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">size_hidden</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The learning rate provided must be either a single &#39;</span>
+                         <span class="s1">&#39;value or provide one learning rate per hidden layer.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;RMSprop&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Multiple learning rates are only &#39;</span>
+                                      <span class="s1">&#39;supported for SGD and Adam optimizers.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The use of layer-specific &quot;adam_epsilon&quot; &#39;</span>
+                             <span class="s1">&#39;values is only supported when there are layer-&#39;</span>
+                             <span class="s1">&#39;specific learning rates.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The provided list of &quot;adam_epsilon&quot; values does &#39;</span>
+                             <span class="s1">&#39;not have the right length.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The provided &quot;clip_grad_norm&quot; value is negative. &#39;</span>
+                      <span class="s1">&#39;No gradient clipping will be performed.&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;target_class_value&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">target_class_value</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">target_class_value</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Target values for the correct class need to be &#39;</span>
+                             <span class="s1">&#39;in the ]0, 1] range.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">dataset</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;mnist&#39;</span><span class="p">,</span> <span class="s1">&#39;fashion_mnist&#39;</span><span class="p">,</span> \
+                                  <span class="s1">&#39;mnist_autoencoder&#39;</span><span class="p">,</span> <span class="s1">&#39;student_teacher&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="c1"># Network-specific arguments.</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;BP&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_first_layer</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_last_layer</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The options &quot;only_train_first_layer&quot; and &#39;</span>
+                                 <span class="s1">&#39;&quot;only_train_last_layer&quot; cannot be both &#39;</span> 
+                                 <span class="s1">&#39;active.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFA&#39;</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">initialization</span> <span class="o">!=</span> <span class="s1">&#39;xavier_normal&#39;</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;&quot;xavier_normal&quot; initialization is preferred for &quot;DFA&quot;.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">or</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">k_p</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only positive values for &quot;k_p&quot; are allowed.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_init</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only positive values for &quot;sigma_init&quot; are &#39;</span>
+                             <span class="s1">&#39;allowed.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Non-dynamical inversion is already active. &#39;</span>
+                              <span class="s1">&#39;Ignoring &quot;compare_with_ndi&quot;.&#39;</span><span class="p">)</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">include_only_converged_samples</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Option &quot;include_only_converged_samples&quot; is &#39;</span>
+                              <span class="s1">&#39;only implemented for dynamical inversion.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span> <span class="ow">and</span> <span class="ow">not</span> \
+                <span class="n">config</span><span class="o">.</span><span class="n">initialization_fb</span> <span class="o">==</span> <span class="s1">&#39;weight_product&#39;</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Feedback weights are not being trained. Setting &#39;</span>
+                          <span class="s1">&#39;their initialization to &quot;weight_product&quot;.&#39;</span><span class="p">)</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">initialization_fb</span> <span class="o">=</span> <span class="s1">&#39;weight_product&#39;</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">check_dfc_time_constants</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">strong_feedback</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The analytical inversion is not applicable &#39;</span>
+                                 <span class="s1">&#39;to settings with strong feedback as the &#39;</span>
+                                 <span class="s1">&#39;linearization becomes inaccurate.&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">error_as_loss_grad</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Setting &quot;error_as_loss_grad&quot; for the strong &#39;</span>
+                              <span class="s1">&#39;feedback DFC.&#39;</span><span class="p">)</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">error_as_loss_grad</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">target_class_value</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Setting target class value to 0.99 for &#39;</span>
+                              <span class="s1">&#39;strong feedback DFC.&#39;</span><span class="p">)</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">target_class_value</span> <span class="o">=</span> <span class="mf">0.99</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">use_jacobian_as_fb</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_condition_fb</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Feedback weights are being fixed to the network &#39;</span>
+                              <span class="s1">&#39;jacobian so condition is not computed as &#39;</span>
+                              <span class="s1">&#39;it always satisfied.&#39;</span><span class="p">)</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">save_condition_fb</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_ndi_angle</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Feedback weights are being fixed to the network &#39;</span>
+                              <span class="s1">&#39;jacobian so ndi angle is not being computed.&#39;</span><span class="p">)</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">save_ndi_angle</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">noisy_dynamics</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Dynamics are noisy, computing the Jacobian at the &#39;</span>
+                          <span class="s1">&#39;average steady-state and not at the steady-state.&#39;</span><span class="p">)</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">compute_jacobian_at</span> <span class="o">=</span> <span class="s1">&#39;average_ss&#39;</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">error_as_loss_grad</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">strong_feedback</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`--error_as_loss_grad` has not yet been &#39;</span>
+                                      <span class="s1">&#39;implemented for weak feedback.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">ss</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Single phase dynamics always use noise so using &#39;</span>
+                           <span class="s1">&#39;the steady-state solutions for the updates is &#39;</span>
+                           <span class="s1">&#39;not recommended.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">extra_fb_epochs</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;The number of extra feedback epochs should ideally &#39;</span>
+                          <span class="s1">&#39;be zero in single-phase experiments!&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">use_jacobian_as_fb</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">noisy_dynamics</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Single phase learning without ideal weights &#39;</span>
+                          <span class="s1">&#39;requires noisy dynamics. Setting &quot;noisy_dynamics&quot; &#39;</span>
+                          <span class="s1">&#39; to ``True``.&#39;</span><span class="p">)</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">noisy_dynamics</span> <span class="o">=</span> <span class="kc">True</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,366 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>networks.dfc_network_single_phase &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for networks.dfc_network_single_phase</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :networks/dfc_network_single_phase.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of a network for Deep Feedback Control that uses a single phase</span>
+<span class="sd">------------------------------------------------------------------------------</span>
+
+<span class="sd">A network that is prepared to be trained with DFC but using a single phase for</span>
+<span class="sd">training both the forward and the feedback weights.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="kn">from</span> <span class="nn">networks.dfc_network</span> <span class="k">import</span> <span class="n">DFCNetwork</span>
+
+<div class="viewcode-block" id="DFCNetworkSinglePhase"><a class="viewcode-back" href="../../networks.html#networks.dfc_network_single_phase.DFCNetworkSinglePhase">[docs]</a><span class="k">class</span> <span class="nc">DFCNetworkSinglePhase</span><span class="p">(</span><span class="n">DFCNetwork</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a network for Deep Feedback Control with single phase.</span>
+
+<span class="sd">    Network that always udpates the feedfoward and feedback weights</span>
+<span class="sd">    simultaneously in one single phase.</span>
+
+<span class="sd">    In this single-phase DFC setting, the following options exist for defining</span>
+<span class="sd">    the target activations. For forward weight learning, the target outputs are</span>
+<span class="sd">    either feedforward activations nudged towards lower loss (default) or set as</span>
+<span class="sd">    the actual supervised targets (if the option `strong_feedback` is active),</span>
+<span class="sd">    just like in two-phase DFC. For feedback weight learning, the target</span>
+<span class="sd">    outputs are either nudged or set to the supervised targets (if</span>
+<span class="sd">    `strong_feedback` is active). However, in the pre-training stage, if the</span>
+<span class="sd">    option `pretrain_without_controller` is active, the targets are set to the</span>
+<span class="sd">    forward activations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of class :class:`dfc_network.DFCNetwork`.</span>
+<span class="sd">        pretrain_without_controller (bool): Whether pretraining should be done</span>
+<span class="sd">            without the controller being on.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">pretrain_without_controller</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Determine constants to filter out the control signal and dynamics.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_alpha_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt_di</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_alpha_r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt_di</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_f</span>
+
+        <span class="c1"># We always low-pass filter the noise, and therefore we don&#39;t need to</span>
+        <span class="c1"># simulate the apical compartment dynamics.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_apical_dynamics</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># apical_time_constant is unneeded</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_low_pass_filter_noise</span> <span class="o">=</span> <span class="kc">True</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pretrain_without_controller</span> <span class="o">=</span> <span class="n">pretrain_without_controller</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pretrain_without_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Getter for read-only attribute</span>
+<span class="sd">        :attr:`pretrain_without_controller`&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pretrain_without_controller</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">alpha_r</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`alpha_r`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_alpha_r</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">alpha_u</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`alpha_u`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_alpha_u</span>
+
+<div class="viewcode-block" id="DFCNetworkSinglePhase.backward"><a class="viewcode-back" href="../../networks.html#networks.dfc_network_single_phase.DFCNetworkSinglePhase.backward">[docs]</a>    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run the feedback phase of the network.</span>
+
+<span class="sd">        Here, the network is pushed to the output target by the controller and</span>
+<span class="sd">        used to compute update of the forward and backward weights.</span>
+
+<span class="sd">        This function simply constitutes a wrapper around the base `backward`</span>
+<span class="sd">        function, where forward updates are computed, and just adds the</span>
+<span class="sd">        feedback weight update.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            loss (torch.Tensor): Mean output loss for current mini-batch.</span>
+<span class="sd">            targets (torch.Tensor): The dataset targets. This will usually be</span>
+<span class="sd">                ignored, as the targets will be taken to be the activations</span>
+<span class="sd">                nudged towards lower loss, unless we use strong feedback.</span>
+<span class="sd">            verbose (bool): Whether to display warnings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">### Compute the feedforward gradients.</span>
+        <span class="n">u_time</span><span class="p">,</span> <span class="n">v_fb_time</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">return_for_fb</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                             <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">freeze_fb_weights</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_jacobian_as_fb</span><span class="p">:</span>
+            <span class="c1">### Compute the feedback gradients.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_feedback_gradients</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">u_time</span><span class="p">,</span> <span class="n">v_fb_time</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="DFCNetworkSinglePhase.dynamical_inversion"><a class="viewcode-back" href="../../networks.html#networks.dfc_network_single_phase.DFCNetworkSinglePhase.dynamical_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">dynamical_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the dynamical (simulated) inversion of the targets.</span>
+
+<span class="sd">        Applies the same function as in the base DFC class, but adds a low-pass</span>
+<span class="sd">        filter to the target activations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_target (torch.Tensor): The output targets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">u_ss</span><span class="p">,</span> <span class="n">v_ss</span><span class="p">,</span> <span class="n">r_ss</span><span class="p">,</span> <span class="n">target_ss</span><span class="p">,</span> <span class="n">delta_v_ss</span><span class="p">,</span> \
+                <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v_fb</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">v_ff</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="o">=</span> \
+                    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dynamical_inversion</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">u_ss</span><span class="o">.</span><span class="n">device</span>
+
+        <span class="c1"># Compute lowpass filter of r (average out the injected noise).</span>
+        <span class="c1"># Note that this function is only called within `backward`, i.e. when</span>
+        <span class="c1"># the forward weights are being trained, and so we can call `alpha_r`</span>
+        <span class="c1"># which makes use of the forward training `dt_di` value.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">noisy_dynamics</span><span class="p">:</span>
+            <span class="n">r_lp</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">r</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="p">):</span>
+                <span class="n">r_lp</span><span class="p">[</span><span class="n">l</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">l</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmax_di</span><span class="p">)):</span>
+                    <span class="n">r_lp</span><span class="p">[</span><span class="n">l</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_r</span> <span class="o">*</span> <span class="n">r</span><span class="p">[</span><span class="n">l</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> \
+                                    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_r</span><span class="p">)</span> <span class="o">*</span> <span class="n">r_lp</span><span class="p">[</span><span class="n">l</span><span class="p">][</span><span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">r_lp</span> <span class="o">=</span> <span class="n">r</span>
+
+        <span class="c1"># Get the steady states.</span>
+        <span class="n">r_ss</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">r_lp</span><span class="p">]</span>
+        <span class="n">r_out_ss</span> <span class="o">=</span> <span class="n">r_ss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">u_ss</span><span class="p">,</span> <span class="n">v_ss</span><span class="p">,</span> <span class="n">r_ss</span><span class="p">,</span> <span class="n">r_out_ss</span><span class="p">,</span> <span class="n">delta_v_ss</span><span class="p">,</span> \
+                <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v_fb</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">v_ff</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DFCNetworkSinglePhase.compute_feedback_gradients"><a class="viewcode-back" href="../../networks.html#networks.dfc_network_single_phase.DFCNetworkSinglePhase.compute_feedback_gradients">[docs]</a>    <span class="k">def</span> <span class="nf">compute_feedback_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">u_time</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                   <span class="n">v_fb_time</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the gradients of the feedback weights for each layer.</span>
+
+<span class="sd">        This function is called in two different situations:</span>
+
+<span class="sd">        1. During pre-training of the feedback weights, there has not yet been a</span>
+<span class="sd">        simulation, so this function calls a simulation (with special values for</span>
+<span class="sd">        :math:`\alpha` and :math:`k` to ensure stability during pre-training) and</span>
+<span class="sd">        uses the results of the simulation to update the feedback weights.</span>
+<span class="sd">        In this case, the inputs :math:`\mathbf{v}^\text{fb}` and </span>
+<span class="sd">        :math:`\mathbf{u}^\text{hp}` will be ``None``.</span>
+
+<span class="sd">        2. During the simultaneous training of feedforward and feedback weights,</span>
+<span class="sd">        the backward method already simulates the dynamics, and the results are</span>
+<span class="sd">        passed through :math:`\mathbf{v}^\text{fb}` and</span>
+<span class="sd">        :math:`\mathbf{u}^\text{hp}`. In this case, we directly use these</span>
+<span class="sd">        simulation results to compute the updates without running a new</span>
+<span class="sd">        simulation.</span>
+
+<span class="sd">        The feedback weight updates are computed according to the following rule:</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \Delta Q = -(1+\frac{\tau_v}{\tau_{\epsilon}})^{L-i}\</span>
+<span class="sd">                \frac{1}{K\sigma^2} \sum_k \mathbf{v}^\text{fb}_i[k] \</span>
+<span class="sd">                \mathbf{u}^{\text{hp}T}[k]</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            (....): See docstring of method :meth:`backward`.</span>
+<span class="sd">            u_time (torch.Tensor): A torch.Tensor of dimension </span>
+<span class="sd">                :math:`t_{max}\times B \times n_L` containing the high-pass</span>
+<span class="sd">                filtered controller inputs. If None (by default), a new</span>
+<span class="sd">                simulation will be run to calculate v_fb_time and u_time.</span>
+<span class="sd">            v_fb_time (torch.Tensor): A list with at index ``i`` a torch.Tensor</span>
+<span class="sd">                of dimension :math:`t_{max}\times B \times n_i` containing the</span>
+<span class="sd">                voltage levels of the apical (feedback) compartment of layer</span>
+<span class="sd">                `i`. If ``None`` (by default), a new simulation will be run to</span>
+<span class="sd">                calculate :math:`\mathbf{v}^\text{fb}` and</span>
+<span class="sd">                :math:`\mathbf{u}^\text{hp}`.</span>
+<span class="sd">            init (bool): Whether this is a pre-training stage. If ``True``,</span>
+<span class="sd">                dynamics values specific for the feedback path will be used.</span>
+<span class="sd">                Else, the same as the forward pass will be used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Suffix to select the right simulation parameter depending on whether</span>
+        <span class="c1"># we are in the common ff and fb training phase or not.</span>
+        <span class="n">sf</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">sigma_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span>
+
+        <span class="k">if</span> <span class="n">u_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Only backward weights are trained (pre-training or extra fb epoch)</span>
+            <span class="n">sf</span> <span class="o">=</span> <span class="s1">&#39;_fb&#39;</span>
+            <span class="n">sigma_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_output_fb</span>
+
+            <span class="k">assert</span> <span class="n">v_fb_time</span> <span class="ow">is</span> <span class="kc">None</span>
+
+            <span class="c1"># We define the target in the same way as for learning ff weights,</span>
+            <span class="c1"># except if we are pre-training and the option</span>
+            <span class="c1"># `pretrain_without_controller` is on, in which case we use the</span>
+            <span class="c1"># same targets as in the two-phase setting.</span>
+            <span class="n">output_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_output_target</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">init</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pretrain_without_controller</span><span class="p">:</span>
+                <span class="n">output_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">activations</span><span class="o">.</span><span class="n">data</span>
+
+            <span class="c1"># Compute the controller signal.</span>
+            <span class="k">if</span> <span class="n">init</span><span class="p">:</span>
+                <span class="c1"># When only the feedback weights are being trained, we can set</span>
+                <span class="c1"># all the simulation hyperparameters to their backward version.</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">u_time</span><span class="p">,</span> <span class="p">(</span><span class="n">v_fb_time</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="n">_</span> <span class="o">=</span>  \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">(</span><span class="n">output_target</span><span class="o">=</span><span class="n">output_target</span><span class="p">,</span>
+                                <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_di_fb</span><span class="p">,</span>
+                                <span class="n">dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_di_fb</span><span class="p">,</span>
+                                <span class="n">tmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmax_di_fb</span><span class="p">,</span>
+                                <span class="n">k_p</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_p_fb</span><span class="p">,</span>
+                                <span class="n">noisy_dynamics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">inst_transmission</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inst_transmission_fb</span><span class="p">,</span>
+                                <span class="n">time_constant_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span><span class="p">,</span>
+                                <span class="n">proactive_controller</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">proactive_controller</span><span class="p">,</span>
+                                <span class="n">sigma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma_fb</span><span class="p">,</span>
+                                <span class="n">sigma_output</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma_output_fb</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">u_time</span><span class="p">,</span> <span class="p">(</span><span class="n">v_fb_time</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="n">_</span> <span class="o">=</span>  \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="p">(</span><span class="n">output_target</span><span class="o">=</span><span class="n">output_target</span><span class="p">,</span>
+                                <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_di</span><span class="p">,</span>
+                                <span class="n">dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_di</span><span class="p">,</span>
+                                <span class="n">tmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmax_di</span><span class="p">,</span>
+                                <span class="n">k_p</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_p</span><span class="p">,</span>
+                                <span class="n">noisy_dynamics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">inst_transmission</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inst_transmission</span><span class="p">,</span>
+                                <span class="n">time_constant_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">time_constant_ratio</span><span class="p">,</span>
+                                <span class="n">proactive_controller</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">proactive_controller</span><span class="p">,</span>
+                                <span class="n">sigma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span>
+                                <span class="n">sigma_output</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma_output</span><span class="p">)</span>
+
+        <span class="c1">### Get high-pass filtered control.</span>
+        <span class="c1"># Compute lowpass filter of u using exponential smoothing.</span>
+        <span class="n">u_time</span> <span class="o">=</span> <span class="n">u_time</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+        <span class="n">u_aux</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">u_time</span><span class="p">)</span>
+        <span class="n">u_aux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">u_time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">u_time</span><span class="p">)):</span>
+            <span class="n">u_aux</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha_u</span> <span class="o">*</span> <span class="n">u_time</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_u</span><span class="p">)</span> <span class="o">*</span> <span class="n">u_aux</span><span class="p">[</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Subtract the low-pass signal to obtain high-pass signal.</span>
+        <span class="c1"># This gets rid of the average target of the nudging phase, and keeps</span>
+        <span class="c1"># only the noise needed to learn the feedback weights.</span>
+        <span class="n">u_filtered</span> <span class="o">=</span> <span class="n">u_time</span> <span class="o">-</span> <span class="n">u_aux</span>
+
+        <span class="c1"># Extract some important parameters that need to be used later.</span>
+        <span class="n">time_constant_ratio</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;time_constant_ratio&#39;</span><span class="p">,</span> <span class="n">sf</span><span class="p">)</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;sigma&#39;</span> <span class="o">+</span> <span class="n">sf</span><span class="p">)</span>
+        <span class="n">sigma_output</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;sigma_output&#39;</span> <span class="o">+</span> <span class="n">sf</span><span class="p">)</span>
+
+        <span class="c1"># Compute gradient for each layer.</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">):</span>
+            <span class="n">v_fb_i</span> <span class="o">=</span> <span class="n">v_fb_time</span><span class="p">[</span><span class="n">i</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+
+            <span class="c1"># compute a layerwise scaling for the feedback weights</span>
+            <span class="n">scaling</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaling_fb_updates</span><span class="p">:</span>
+                <span class="n">scaling</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">time_constant_ratio</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_noise</span><span class="p">)</span> \
+                         <span class="o">**</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># get the amount of noise used.</span>
+            <span class="n">sigma_i</span> <span class="o">=</span> <span class="n">sigma</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">sigma_i</span> <span class="o">=</span> <span class="n">sigma_output</span>
+
+            <span class="n">layer</span><span class="o">.</span><span class="n">compute_feedback_gradients_continuous</span><span class="p">(</span><span class="n">v_fb_i</span><span class="p">,</span> <span class="n">u_filtered</span><span class="p">,</span>
+                                                        <span class="n">sigma</span><span class="o">=</span><span class="n">sigma_i</span><span class="p">,</span>
+                                                        <span class="n">scaling</span><span class="o">=</span><span class="n">scaling</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

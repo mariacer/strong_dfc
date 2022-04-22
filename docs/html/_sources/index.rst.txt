@@ -1,0 +1,32 @@
+.. dfc documentation master file, created by
+   sphinx-quickstart on Thu Aug  5 13:10:18 2021.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to DFC's documentation 2!
+=================================
+
+.. image:: figures/dfc.png
+  :width: 650
+
+This is the documentation of the official Deep Feedback Control (DFC) and Strong-DFC implementations. The corresponding papers are:
+
+* `DFC <https://arxiv.org/abs/2106.07887>`_
+* `Strong-DFC <https://arxiv.org/abs/2204.07249>`_
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents of the repository:
+
+   Main script <main.rst>
+   Data <datahandlers.rst>
+   Networks <networks.rst>
+   Utilities <utils.rst>
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

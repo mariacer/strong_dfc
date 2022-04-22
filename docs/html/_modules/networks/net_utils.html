@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>networks.net_utils &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for networks.net_utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :networks/net_utils.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Helper functions for generating different networks</span>
+<span class="sd">--------------------------------------------------</span>
+
+<span class="sd">A collection of helper functions for generating networks to keep other scripts</span>
+<span class="sd">clean.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">networks</span> <span class="k">import</span> <span class="n">bp_network</span><span class="p">,</span> <span class="n">dfa_network</span><span class="p">,</span> <span class="n">dfc_network</span><span class="p">,</span>\
+                     <span class="n">dfc_network_single_phase</span>
+
+<div class="viewcode-block" id="generate_network"><a class="viewcode-back" href="../../networks.html#networks.net_utils.generate_network">[docs]</a><span class="k">def</span> <span class="nf">generate_network</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">network_type</span><span class="o">=</span><span class="s1">&#39;BP&#39;</span><span class="p">,</span>
+                     <span class="n">classification</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create the network based on the provided command line arguments.</span>
+
+<span class="sd">    config:</span>
+<span class="sd">        config: Command-line arguments.</span>
+<span class="sd">        dataset: The dataset being used.</span>
+<span class="sd">        device: The cuda device.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        classification (boolean): Whether the task is a classification task.</span>
+<span class="sd">        logger: The logger. If `None` nothing will be logged.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The network.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Prepare the necessary keywords.</span>
+    <span class="n">kwconfig_bp</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;n_in&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">in_size</span><span class="p">,</span>
+        <span class="s1">&#39;n_hidden&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">size_hidden</span><span class="p">,</span>
+        <span class="s1">&#39;n_out&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">out_size</span><span class="p">,</span>
+        <span class="s1">&#39;activation&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">hidden_activation</span><span class="p">,</span>
+        <span class="s1">&#39;bias&#39;</span><span class="p">:</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">no_bias</span><span class="p">,</span>
+        <span class="s1">&#39;initialization&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">initialization</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Generate the network.</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;BP&#39;</span><span class="p">:</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">bp_network</span><span class="o">.</span><span class="n">BPNetwork</span><span class="p">(</span><span class="o">**</span><span class="n">kwconfig_bp</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFA&#39;</span><span class="p">:</span>
+        <span class="n">net</span> <span class="o">=</span> <span class="n">dfa_network</span><span class="o">.</span><span class="n">DFANetwork</span><span class="p">(</span><span class="o">**</span><span class="n">kwconfig_bp</span><span class="p">)</span> 
+
+    <span class="k">elif</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">or</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+        <span class="n">forward_requires_grad</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">save_bp_angle</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span>
+        <span class="n">kwconfig_dfc_base</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;sigma&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span> 
+                <span class="s1">&#39;sigma_fb&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_fb</span><span class="p">,</span>
+                <span class="s1">&#39;sigma_output&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_output</span><span class="p">,</span>
+                <span class="s1">&#39;sigma_output_fb&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_output_fb</span><span class="p">,</span>
+                <span class="s1">&#39;sigma_init&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_init</span><span class="p">,</span>
+                <span class="s1">&#39;epsilon_di&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">epsilon_di</span><span class="p">,</span>
+                <span class="s1">&#39;initialization_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">initialization_fb</span><span class="p">,</span>
+                <span class="s1">&#39;alpha_di&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">alpha_di</span><span class="p">,</span>
+                <span class="s1">&#39;alpha_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">alpha_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;dt_di&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di</span><span class="p">,</span>
+                <span class="s1">&#39;dt_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;tmax_di&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">tmax_di</span><span class="p">,</span>
+                <span class="s1">&#39;tmax_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">tmax_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;k_p&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">k_p</span><span class="p">,</span>
+                <span class="s1">&#39;k_p_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">k_p_fb</span><span class="p">,</span>
+                <span class="s1">&#39;inst_transmission&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">inst_transmission</span><span class="p">,</span>
+                <span class="s1">&#39;inst_transmission_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">inst_transmission_fb</span><span class="p">,</span>
+                <span class="s1">&#39;time_constant_ratio&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio</span><span class="p">,</span>
+                <span class="s1">&#39;time_constant_ratio_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span><span class="p">,</span>
+                <span class="s1">&#39;proactive_controller&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">proactive_controller</span><span class="p">,</span>
+                <span class="s1">&#39;noisy_dynamics&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">noisy_dynamics</span><span class="p">,</span>
+                <span class="s1">&#39;inst_system_dynamics&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">inst_system_dynamics</span><span class="p">,</span>
+                <span class="s1">&#39;inst_transmission_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">inst_transmission_fb</span><span class="p">,</span>
+                <span class="s1">&#39;target_stepsize&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">target_stepsize</span><span class="p">,</span>
+                <span class="s1">&#39;include_non_converged_samples&#39;</span><span class="p">:</span> \
+                    <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">include_only_converged_samples</span><span class="p">,</span>
+                <span class="s1">&#39;compare_with_ndi&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span><span class="p">,</span>
+                <span class="s1">&#39;save_ndi_updates&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">save_ndi_angle</span><span class="p">,</span>
+                <span class="s1">&#39;save_df&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">save_df</span><span class="p">,</span>
+                <span class="s1">&#39;low_pass_filter_u&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">low_pass_filter_u</span><span class="p">,</span>
+                <span class="s1">&#39;low_pass_filter_noise&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">low_pass_filter_noise</span><span class="p">,</span>
+                <span class="s1">&#39;tau_f&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_f</span><span class="p">,</span>
+                <span class="s1">&#39;tau_noise&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">tau_noise</span><span class="p">,</span>
+                <span class="s1">&#39;use_jacobian_as_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">use_jacobian_as_fb</span><span class="p">,</span>
+                <span class="s1">&#39;freeze_fb_weights&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">,</span>
+                <span class="s1">&#39;scaling_fb_updates&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">scaling_fb_updates</span><span class="p">,</span>
+                <span class="s1">&#39;compute_jacobian_at&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">compute_jacobian_at</span><span class="p">,</span>
+                <span class="s1">&#39;sigma_fb&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_fb</span><span class="p">,</span>
+                <span class="s1">&#39;sigma_output_fb&#39;</span> <span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">sigma_output_fb</span><span class="p">,</span>
+                <span class="s1">&#39;alpha_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">alpha_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;dt_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">dt_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;tmax_di_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">tmax_di_fb</span><span class="p">,</span>
+                <span class="s1">&#39;k_p_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">k_p_fb</span><span class="p">,</span>
+                <span class="s1">&#39;inst_transmission_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">inst_transmission_fb</span><span class="p">,</span>
+                <span class="s1">&#39;time_constant_ratio_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">time_constant_ratio_fb</span><span class="p">,</span>
+                <span class="s1">&#39;learning_rule&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">learning_rule</span><span class="p">,</span>
+                <span class="s1">&#39;strong_feedback&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">strong_feedback</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span><span class="p">:</span>
+            <span class="n">cont_updates</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">ssa</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">ss</span><span class="p">)</span>
+            <span class="n">forward_requires_grad</span> <span class="o">=</span> <span class="n">forward_requires_grad</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span>
+
+            <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">ss</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Steady-state updates computed dynamically.&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Steady-state updates computed with analytical &#39;</span>
+                                <span class="s1">&#39;solution.&#39;</span><span class="p">)</span> <span class="c1"># old non-dynamical inversion</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Continuous updates computed dynamically.&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Also computing analytical solution for &#39;</span>
+                                    <span class="s1">&#39;comparison (this causes a computational &#39;</span>
+                                <span class="s1">&#39;overhead).&#39;</span><span class="p">)</span>
+            <span class="n">kwconfig_dfc</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ndi&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">ssa</span><span class="p">,</span>
+                    <span class="s1">&#39;cont_updates&#39;</span><span class="p">:</span> <span class="n">cont_updates</span><span class="p">,</span>
+                    <span class="s1">&#39;apical_time_constant&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant</span><span class="p">,</span>
+                    <span class="s1">&#39;apical_time_constant_fb&#39;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">apical_time_constant_fb</span><span class="p">,</span>
+                    <span class="s1">&#39;forward_requires_grad&#39;</span><span class="p">:</span> <span class="n">forward_requires_grad</span><span class="p">}</span>
+
+            <span class="n">net</span> <span class="o">=</span> <span class="n">dfc_network</span><span class="o">.</span><span class="n">DFCNetwork</span><span class="p">(</span><span class="o">**</span><span class="n">kwconfig_bp</span><span class="p">,</span> <span class="o">**</span><span class="n">kwconfig_dfc</span><span class="p">,</span>
+                                         <span class="o">**</span><span class="n">kwconfig_dfc_base</span><span class="p">)</span> 
+
+        <span class="k">elif</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Single-phase updates computed dynamically.&#39;</span><span class="p">)</span>
+            <span class="n">kwconfig_dfc</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ndi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="s1">&#39;cont_updates&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                            <span class="s1">&#39;forward_requires_grad&#39;</span><span class="p">:</span> <span class="n">forward_requires_grad</span><span class="p">,</span>
+                            <span class="s1">&#39;pretrain_without_controller&#39;</span><span class="p">:</span> \
+                                       <span class="n">config</span><span class="o">.</span><span class="n">pretrain_without_controller</span><span class="p">}</span>
+
+            <span class="n">net</span> <span class="o">=</span> <span class="n">dfc_network_single_phase</span><span class="o">.</span><span class="n">DFCNetworkSinglePhase</span><span class="p">(</span>
+                                                    <span class="o">**</span><span class="n">kwconfig_bp</span><span class="p">,</span>
+                                                    <span class="o">**</span><span class="n">kwconfig_dfc</span><span class="p">,</span>
+                                                    <span class="o">**</span><span class="n">kwconfig_dfc_base</span><span class="p">)</span>  
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The provided network type </span><span class="si">{}</span><span class="s1"> is not supported&#39;</span><span class="o">.</span>\
+                <span class="nb">format</span><span class="p">(</span><span class="n">network_type</span><span class="p">))</span>
+
+    <span class="c1"># Print summary information about the network.</span>
+    <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log_net_details</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">network_type</span><span class="p">)</span>
+
+    <span class="n">net</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">net</span></div>
+
+<div class="viewcode-block" id="log_net_details"><a class="viewcode-back" href="../../networks.html#networks.net_utils.log_net_details">[docs]</a><span class="k">def</span> <span class="nf">log_net_details</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">network_type</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Log the architecture of the network.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        logger: The logger.</span>
+<span class="sd">        net: The network.</span>
+<span class="sd">        network_type: The type of network.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shapes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">forward_params</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">bias</span> <span class="o">=</span> <span class="s1">&#39;with&#39;</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">bias</span> <span class="o">=</span> <span class="s1">&#39;without&#39;</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">pp</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="n">param</span><span class="p">]</span>
+        <span class="n">shapes</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Created </span><span class="si">%s</span><span class="s1"> network </span><span class="si">%s</span><span class="s1"> bias.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">network_type</span><span class="p">,</span> <span class="n">bias</span><span class="p">))</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Network architecture: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">shapes</span><span class="p">))</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

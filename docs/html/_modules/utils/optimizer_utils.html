@@ -1,0 +1,418 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils.optimizer_utils &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.optimizer_utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :utils/optimizer_utils.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Helper functions for building optimizers</span>
+<span class="sd">----------------------------------------</span>
+
+<span class="sd">A collection of functions for building a custom set of optimizers.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<div class="viewcode-block" id="get_optimizers"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.get_optimizers">[docs]</a><span class="k">def</span> <span class="nf">get_optimizers</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">network_type</span><span class="o">=</span><span class="s1">&#39;BP&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the optimizers based on command line arguments.</span>
+
+<span class="sd">    Returns optimizers for forward weights and when necessary of feedback and</span>
+<span class="sd">    feedback weight initialization as well.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config: The command-line arguments.</span>
+<span class="sd">        net: The network.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        logger: The logger. If `None` nothing will be logged.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (dict): A dictionary containing forward, feedback and feedback init</span>
+<span class="sd">            optimizers, if required.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;only_train_last_layer&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                                                <span class="n">config</span><span class="o">.</span><span class="n">only_train_last_layer</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Shallow training.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;only_train_first_layer&#39;</span><span class="p">)</span> <span class="ow">and</span> \
+                                                <span class="n">config</span><span class="o">.</span><span class="n">only_train_first_layer</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Only training first layer.&#39;</span><span class="p">)</span>
+
+    <span class="c1">### Construct forward optimizer.</span>
+    <span class="n">forward_params</span> <span class="o">=</span> <span class="n">extract_parameters</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span>
+                                        <span class="n">return_nones</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">forward_optimizer</span> <span class="o">=</span> <span class="n">OptimizerList</span><span class="p">(</span><span class="n">forward_params</span><span class="p">,</span>
+                          <span class="n">lr</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span> 
+                          <span class="n">optimizer_type</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span>
+                          <span class="n">no_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">no_bias</span><span class="p">,</span>
+                          <span class="n">momentum</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">momentum</span><span class="p">,</span>
+                          <span class="n">weight_decay</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">weight_decay</span><span class="p">,</span>
+                          <span class="n">adam_beta1</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta1</span><span class="p">,</span>
+                          <span class="n">adam_beta2</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta2</span><span class="p">,</span>
+                          <span class="n">adam_epsilon</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+        <span class="n">forward_optimizer</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">opt_loc</span><span class="o">=</span><span class="s1">&#39;forward&#39;</span><span class="p">)</span>
+    <span class="n">optimizers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;forward&#39;</span><span class="p">:</span> <span class="n">forward_optimizer</span><span class="p">}</span>
+
+    <span class="c1">### Construct backward optimizers.</span>
+    <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+        <span class="n">feedback_params</span> <span class="o">=</span> <span class="n">extract_parameters</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span>
+                                             <span class="n">params_type</span><span class="o">=</span><span class="s1">&#39;feedback&#39;</span><span class="p">,</span>
+                                             <span class="n">return_nones</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="n">feedback_optimizer</span> <span class="o">=</span> <span class="n">OptimizerList</span><span class="p">(</span><span class="n">feedback_params</span><span class="p">,</span>
+                          <span class="n">lr</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">lr_fb</span><span class="p">,</span> 
+                          <span class="n">optimizer_type</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimizer_fb</span><span class="p">,</span>
+                          <span class="n">no_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                          <span class="n">momentum</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">momentum_fb</span><span class="p">,</span>
+                          <span class="n">weight_decay</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">weight_decay_fb</span><span class="p">,</span>
+                          <span class="n">adam_beta1</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta1_fb</span><span class="p">,</span>
+                          <span class="n">adam_beta2</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta2_fb</span><span class="p">,</span>
+                          <span class="n">adam_epsilon</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon_fb</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+            <span class="n">feedback_optimizer</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">opt_loc</span><span class="o">=</span><span class="s1">&#39;feedback&#39;</span><span class="p">)</span>
+        <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;feedback&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feedback_optimizer</span>
+
+        <span class="n">feedback_optimizer_init</span> <span class="o">=</span> <span class="n">OptimizerList</span><span class="p">(</span><span class="n">feedback_params</span><span class="p">,</span>
+                          <span class="n">lr</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">lr_fb_init</span><span class="p">,</span> 
+                          <span class="n">optimizer_type</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimizer_fb</span><span class="p">,</span>
+                          <span class="n">no_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                          <span class="n">momentum</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">momentum_fb</span><span class="p">,</span>
+                          <span class="n">weight_decay</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">weight_decay_fb</span><span class="p">,</span>
+                          <span class="n">adam_beta1</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta1_fb</span><span class="p">,</span>
+                          <span class="n">adam_beta2</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_beta2_fb</span><span class="p">,</span>
+                          <span class="n">adam_epsilon</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">adam_epsilon_fb</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+            <span class="n">feedback_optimizer_init</span><span class="o">.</span><span class="n">log_info</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">opt_loc</span><span class="o">=</span><span class="s1">&#39;feedback init&#39;</span><span class="p">)</span>
+        <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;feedback_init&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feedback_optimizer_init</span>
+
+    <span class="k">return</span> <span class="n">optimizers</span></div>
+
+<div class="viewcode-block" id="extract_parameters"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.extract_parameters">[docs]</a><span class="k">def</span> <span class="nf">extract_parameters</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span> <span class="n">params_type</span><span class="o">=</span><span class="s1">&#39;forward&#39;</span><span class="p">,</span>
+                       <span class="n">return_nones</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extract list of parameters to be optimized.</span>
+
+<span class="sd">    This function can utilize the native functions of the networks that directly</span>
+<span class="sd">    provide the list of parameters, but here we additionally look at the command</span>
+<span class="sd">    line arguments and see whether some options freeze certain of those</span>
+<span class="sd">    parameters.</span>
+
+<span class="sd">    By default, a list of the parameters to be learned is returned. However, if</span>
+<span class="sd">    the option `return_nones` is activated, the list of parameters might have</span>
+<span class="sd">    `None` for those layer parameters that exist but shouldn&#39;t be learned. This</span>
+<span class="sd">    is useful, for example, when generating the optimizer in case there is a</span>
+<span class="sd">    per-layer learning rate.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        net: The network.</span>
+<span class="sd">        config: The command-line arguments.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        params_type (str): The type of parameters, for DFC networks. Can be</span>
+<span class="sd">            `forward` or `feedback`.</span>
+<span class="sd">        return_nones (boolean): </span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (list): The parameters to be optimized.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;BP&#39;</span><span class="p">:</span>
+        <span class="c1"># For backprop, plasticity might be limited to certain layers.</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">params</span>
+        <span class="k">if</span> <span class="n">return_nones</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_first_layer</span><span class="p">)</span> <span class="ow">or</span> \
+                        <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span> <span class="ow">or</span> \
+                        <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_last_layer</span><span class="p">):</span>
+                    <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_last_layer</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">only_train_first_layer</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            
+    <span class="k">elif</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFA&#39;</span><span class="p">:</span>
+        <span class="c1"># For DFA, the network only returns the forward parameters.</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">params</span>
+        <span class="k">if</span> <span class="n">return_nones</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">elif</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+        <span class="c1"># For DFC, we need to specify which parameters we want to train.</span>
+        <span class="k">if</span> <span class="n">params_type</span> <span class="o">==</span> <span class="s1">&#39;forward&#39;</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward_params</span>
+            <span class="k">if</span> <span class="n">return_nones</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+                        <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span><span class="p">:</span>
+                    <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="n">params_type</span> <span class="o">==</span> <span class="s1">&#39;feedback&#39;</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">feedback_params</span>
+            <span class="k">if</span> <span class="n">return_nones</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+                        <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights_output</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+                    <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights_output</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">return</span> <span class="n">params</span></div>
+
+<div class="viewcode-block" id="OptimizerList"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.OptimizerList">[docs]</a><span class="k">class</span> <span class="nc">OptimizerList</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An optimizer instance that handles layer-specific specifications.</span>
+
+<span class="sd">    This class stacks a separate optimizer for each layer in a list. If</span>
+<span class="sd">    no separate learning rates per layer are required, a single optimizer is</span>
+<span class="sd">    stored in the optimizer list.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        params_list (list): The parameters to be optimized.</span>
+<span class="sd">        lr (float): The learning rate.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        optimizer_type (str): The optimizer type.</span>
+<span class="sd">        no_bias (boolean): Whether no bias terms are learned.</span>
+<span class="sd">        momentum (boolean): The momentum value.</span>
+<span class="sd">        forward_wd (boolean): The forward weight decay value.</span>
+<span class="sd">        adam_beta1 (float): beta1 value for Adam.</span>
+<span class="sd">        adam_beta2 (float): beta2 value for Adam.</span>
+<span class="sd">        adam_epsilon (float): epsilon value for Adam.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params_list</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">optimizer_type</span><span class="o">=</span><span class="s1">&#39;SGD&#39;</span><span class="p">,</span>
+                 <span class="n">network_type</span><span class="o">=</span><span class="s1">&#39;BP&#39;</span><span class="p">,</span> <span class="n">no_bias</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">weight_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">adam_beta1</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">adam_beta2</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+                 <span class="n">adam_epsilon</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params_list</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">params_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">params_list</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">adam_epsilon</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">adam_epsilon</span> <span class="o">=</span> <span class="p">[</span><span class="n">adam_epsilon</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">params_list</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">adam_epsilon</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">adam_epsilon</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">adam_epsilon</span> <span class="o">=</span> <span class="p">[</span><span class="n">adam_epsilon</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">params_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">lr</span> <span class="o">=</span> <span class="p">[</span><span class="n">lr</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">params_list</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">lr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">lr</span> <span class="o">=</span> <span class="p">[</span><span class="n">lr</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">params_list</span><span class="p">)</span>
+
+        <span class="n">optimizer_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">params</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params_list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimizer_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">build_optimizer</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                            <span class="n">optimizer_type</span><span class="o">=</span><span class="n">optimizer_type</span><span class="p">,</span>
+                                            <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">,</span>
+                                            <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span>
+                                            <span class="n">adam_beta1</span><span class="o">=</span><span class="n">adam_beta1</span><span class="p">,</span>
+                                            <span class="n">adam_beta2</span><span class="o">=</span><span class="n">adam_beta2</span><span class="p">,</span>
+                                            <span class="n">adam_epsilon</span><span class="o">=</span><span class="n">adam_epsilon</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lr</span> <span class="o">=</span> <span class="n">lr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_type</span> <span class="o">=</span> <span class="n">optimizer_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span> <span class="o">=</span> <span class="n">optimizer_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">params_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">optimizer_type</span>
+
+<div class="viewcode-block" id="OptimizerList.zero_grad"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.OptimizerList.zero_grad">[docs]</a>    <span class="k">def</span> <span class="nf">zero_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set all the gradients to zero.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">optimizer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span><span class="p">:</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="OptimizerList.step"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.OptimizerList.step">[docs]</a>    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform a step on the optimizer in all or a single specific layer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            i (int): The layer where to perform the step. If ``None``, then the</span>
+<span class="sd">                step is made on all optimizers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">optimizer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span><span class="p">:</span>
+                <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overwrite get item function.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            i (int): The index of desired element of the optimizer list.</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            The corresponding optimizer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+<div class="viewcode-block" id="OptimizerList.log_info"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.OptimizerList.log_info">[docs]</a>    <span class="k">def</span> <span class="nf">log_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">opt_loc</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Display information about optimizer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            logger: The logger.</span>
+<span class="sd">            opt_loc (str): The type of optimizer (forward, feedback...).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lr</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Using </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> optimizer with lr = </span><span class="si">%.5f</span><span class="s1">.&#39;</span> <span class="o">%</span> \
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">opt_loc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lr</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Using </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> optimizer with:&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">opt_loc</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">forward_opt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_list</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">forward_opt</span><span class="o">.</span><span class="n">param_groups</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+                <span class="n">lr</span> <span class="o">=</span> <span class="n">forward_opt</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">]</span>
+                <span class="n">shapes</span> <span class="o">=</span> <span class="nb">str</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">pm</span> <span class="ow">in</span> \
+                            <span class="n">forward_opt</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;params&#39;</span><span class="p">]])</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;     lr = </span><span class="si">%.3f</span><span class="s1"> for params with shape </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> \
+                            <span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">shapes</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span></div></div>
+
+
+<div class="viewcode-block" id="build_optimizer"><a class="viewcode-back" href="../../utils.html#utils.optimizer_utils.build_optimizer">[docs]</a><span class="k">def</span> <span class="nf">build_optimizer</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">optimizer_type</span><span class="o">=</span><span class="s1">&#39;SGD&#39;</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                     <span class="n">weight_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">adam_beta1</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+                     <span class="n">adam_beta2</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">adam_epsilon</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build optimizer given a certain set of parameters to be optimized.</span>
+
+<span class="sd">    This function can be used for building forward and backward optimizers.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        params: The parameters to be optimized.</span>
+<span class="sd">        optimizer_type (str): The name of the optimizer.</span>
+<span class="sd">        lr (float): The learning rate.</span>
+<span class="sd">        weight_decay (float): The weight decay.</span>
+<span class="sd">        momentum (float): The momentum for SGD and RMSprop optimizers.</span>
+<span class="sd">        adam_beta1 (float): beta1 value for Adam.</span>
+<span class="sd">        adam_beta2 (float): beta2 value for Adam.</span>
+<span class="sd">        adam_epsilon (float): epsilon value for Adam.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The optimizer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">optimizer_type</span> <span class="o">==</span> <span class="s1">&#39;SGD&#39;</span><span class="p">:</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span>
+                                    <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">optimizer_type</span> <span class="o">==</span> <span class="s1">&#39;RMSprop&#39;</span><span class="p">:</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span>
+                                        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+                                        <span class="n">eps</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span>
+                                        <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">,</span>
+                                        <span class="n">centered</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">optimizer_type</span> <span class="o">==</span> <span class="s1">&#39;Adam&#39;</span><span class="p">:</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span>
+                                     <span class="n">betas</span><span class="o">=</span><span class="p">(</span><span class="n">adam_beta1</span><span class="p">,</span> <span class="n">adam_beta2</span><span class="p">),</span>
+                                     <span class="n">eps</span><span class="o">=</span><span class="n">adam_epsilon</span><span class="p">,</span>
+                                     <span class="n">weight_decay</span><span class="o">=</span><span class="n">weight_decay</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">optimizer</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,1229 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Utilities &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Networks" href="networks.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="utilities">
+<span id="utilities-reference-label"></span><h1><a class="toc-backref" href="#id1">Utilities</a><a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#utilities" id="id1">Utilities</a></p>
+<ul>
+<li><p><a class="reference internal" href="#general-notes" id="id2">General Notes</a></p></li>
+<li><p><a class="reference internal" href="#module-utils.args" id="id3">API</a></p>
+<ul>
+<li><p><a class="reference internal" href="#command-line-argument-parsing" id="id4">Command line argument parsing</a></p></li>
+<li><p><a class="reference internal" href="#utilities-for-mathematical-computations" id="id5">Utilities for mathematical computations</a></p></li>
+<li><p><a class="reference internal" href="#helper-functions-for-building-optimizers" id="id6">Helper functions for building optimizers</a></p></li>
+<li><p><a class="reference internal" href="#helper-functions-for-simulations" id="id7">Helper functions for simulations</a></p></li>
+<li><p><a class="reference internal" href="#helper-functions-for-training-and-testing-networks" id="id8">Helper functions for training and testing networks</a></p></li>
+<li><p><a class="reference internal" href="#helper-functions-for-plotting" id="id9">Helper functions for plotting</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="general-notes">
+<h2><a class="toc-backref" href="#id2">General Notes</a><a class="headerlink" href="#general-notes" title="Permalink to this headline">¶</a></h2>
+<p>Miscellaneous utilities for performing experiments.</p>
+</div>
+<div class="section" id="module-utils.args">
+<span id="api"></span><h2><a class="toc-backref" href="#id3">API</a><a class="headerlink" href="#module-utils.args" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="command-line-argument-parsing">
+<h3><a class="toc-backref" href="#id4">Command line argument parsing</a><a class="headerlink" href="#command-line-argument-parsing" title="Permalink to this headline">¶</a></h3>
+<p>Command-line arguments common to all experiments.</p>
+<dl class="function">
+<dt id="utils.args.check_dfc_time_constants">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">check_dfc_time_constants</code><span class="sig-paren">(</span><em class="sig-param">config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#check_dfc_time_constants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.check_dfc_time_constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check the time constants for DFC runs.</p>
+<p>We need to ensure <img class="math" src="_images/math/cb2ae9a136a027892a584bf6c27ccf928614ad5f.png" alt="\delta_t \inf \inf \tau_v , \tau_{\epsilon} \\
+\inf \inf \tau_f \inf \inf \tau_u = 1"/>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>config</strong> – The config.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The (potentially modified) config.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.check_invalid_args_general">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">check_invalid_args_general</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">network_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#check_invalid_args_general"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.check_invalid_args_general" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sanity check for command-line arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – Parsed command-line arguments.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.dataset_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">dataset_args</code><span class="sig-paren">(</span><em class="sig-param">parser</em>, <em class="sig-param">ddataset='mnist'</em>, <em class="sig-param">dtarget_class_value=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#dataset_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.dataset_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add arguments to the dataset argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.dfc_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">dfc_args</code><span class="sig-paren">(</span><em class="sig-param">parser</em>, <em class="sig-param">dinit_fb_epochs=1</em>, <em class="sig-param">dsigma_init=0</em>, <em class="sig-param">dextra_fb_epochs=0</em>, <em class="sig-param">dtarget_stepsize=0.001</em>, <em class="sig-param">depsilon_di=0.5</em>, <em class="sig-param">dtau_f=0.9</em>, <em class="sig-param">dtau_noise=0.8</em>, <em class="sig-param">single_phase=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#dfc_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.dfc_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add DFC arguments to the training argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p></li>
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – Default values for the arguments.</p></li>
+<li><p><strong>single_phase</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – Whether we are doing DFC with a single phase.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The created argument group, in case more options should be added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.miscellaneous_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">miscellaneous_args</code><span class="sig-paren">(</span><em class="sig-param">mgroup</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#miscellaneous_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.miscellaneous_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add arguments to the miscellaneous argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mgroup</strong> – The argument group returned by method
+<code class="xref py py-func docutils literal notranslate"><span class="pre">utils.cli_args.miscellaneous_args()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.network_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">network_args</code><span class="sig-paren">(</span><em class="sig-param">parser</em>, <em class="sig-param">dsize_hidden='5'</em>, <em class="sig-param">dhidden_activation='linear'</em>, <em class="sig-param">dinitialization='xavier_normal'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#network_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.network_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add arguments to the network argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p></li>
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – Default values for the arguments.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The created argument group, in case more options should be added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.optimizer_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">optimizer_args</code><span class="sig-paren">(</span><em class="sig-param">tgroup</em>, <em class="sig-param">suffix=''</em>, <em class="sig-param">dlr='0.1'</em>, <em class="sig-param">dmomentum=0</em>, <em class="sig-param">dweight_decay=0</em>, <em class="sig-param">doptimizer='SGD'</em>, <em class="sig-param">dbeta1=0.99</em>, <em class="sig-param">dbeta2=0.99</em>, <em class="sig-param">depsilon='1e-8'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#optimizer_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.optimizer_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimizer options.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p></li>
+<li><p><strong>suffix</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The suffix to be added to the arguments. Can be emtpy,
+or <cite>_fb</cite> for the feedback weights in DFC.</p></li>
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – Default values for the arguments.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The created argument group, in case more options should be added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.parse_cmd_arguments">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">parse_cmd_arguments</code><span class="sig-paren">(</span><em class="sig-param">network_type='BP'</em>, <em class="sig-param">default=False</em>, <em class="sig-param">argv=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#parse_cmd_arguments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.parse_cmd_arguments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse command-line arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The network type to be used.</p></li>
+<li><p><strong>default</strong> (<em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, command-line arguments will be ignored
+and only the default values will be parsed.</p></li>
+<li><p><strong>argv</strong> (<em>optional</em>) – If provided, it will be treated as a list of command-
+line argument that is passed to the parser in place of sys.argv.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The Namespace object containing argument names and values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.post_process_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">post_process_args</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">network_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#post_process_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.post_process_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Post process the command line arguments.</p>
+<dl class="simple">
+<dt>Which kind of stuff is post-processed here for all runs?</dt><dd><ul class="simple">
+<li><p>reduce number of epochs if we are in a <cite>test</cite> setting</p></li>
+<li><p>convert string into lists (for architecture, learning rates)</p></li>
+</ul>
+</dd>
+<dt>Which kind of stuff is post-processed here for DFC runs?</dt><dd><ul class="simple">
+<li><p>adjust learning rate based on target nudging strength if needed</p></li>
+<li><p>copy forward phase hyperparameters for feedback phase if not provided</p></li>
+<li><dl class="simple">
+<dt>fill in possibly missing arguments for:</dt><dd><ul>
+<li><p>lr_fb_init &lt;- lr_fb</p></li>
+<li><p>sigma_output &lt;- sigma</p></li>
+<li><p>sigma_output_fb &lt;- sigma_fb</p></li>
+<li><p>apical_time_constant &lt;- dt_di</p></li>
+<li><p>apical_time_constant_fb &lt;- dt_di_fb</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>remove feedback training if Jacobian is used as feedback.</p></li>
+<li><p>determine whether dataframe should be stored.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – Parsed command-line arguments.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The post-processed config.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.student_teacher_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">student_teacher_args</code><span class="sig-paren">(</span><em class="sig-param">parser</em>, <em class="sig-param">dnum_train=1000</em>, <em class="sig-param">dnum_val=1000</em>, <em class="sig-param">dnum_test=1000</em>, <em class="sig-param">dteacher_n_in=10</em>, <em class="sig-param">dteacher_n_out=2</em>, <em class="sig-param">dteacher_size_hidden='5'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#student_teacher_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.student_teacher_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add arguments to the student-teacher argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.args.training_args">
+<code class="sig-prename descclassname">utils.args.</code><code class="sig-name descname">training_args</code><span class="sig-paren">(</span><em class="sig-param">parser</em>, <em class="sig-param">network_type</em>, <em class="sig-param">depochs=2</em>, <em class="sig-param">dbatch_size=128</em>, <em class="sig-param">dclip_grad_norm=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/args.html#training_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.args.training_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a helper function of the function <a class="reference internal" href="#utils.args.parse_cmd_arguments" title="utils.args.parse_cmd_arguments"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_cmd_arguments()</span></code></a> to
+add arguments to the training argument group.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parser</strong> (<a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><em>argparse.ArgumentParser</em></a>) – Argument parser.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – Default values for the arguments.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The created argument group, in case more options should be added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-utils.math_utils"></span><div class="section" id="utilities-for-mathematical-computations">
+<h3><a class="toc-backref" href="#id5">Utilities for mathematical computations</a><a class="headerlink" href="#utilities-for-mathematical-computations" title="Permalink to this headline">¶</a></h3>
+<p>Functions required for mathematical computations.</p>
+<dl class="function">
+<dt id="utils.math_utils.bool_to_indices">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">bool_to_indices</code><span class="sig-paren">(</span><em class="sig-param">bool_vector</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#bool_to_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.bool_to_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an array of boolean indices to integer indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bool_vector</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A vector of booleans.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of indices that are <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)">list</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.compute_angle">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">compute_angle</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">B</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#compute_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.compute_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the angle between two tensors of the same size.</p>
+<p>The tensors will be flattened, after which the angle is computed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – First tensor.</p></li>
+<li><p><strong>B</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – Second tensor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The angle between the two tensors in degrees.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.compute_jacobian">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">compute_jacobian</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">structured_tensor=False</em>, <em class="sig-param">retain_graph=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#compute_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.compute_jacobian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Jacobian matrix of output with respect to input.</p>
+<p>If input and/or output have more than one dimension, the Jacobian of the
+flattened output with respect to the flattened input is returned if
+<cite>structured_tensor</cite> is <cite>False</cite>. If <cite>structured_tensor</cite> is <cite>True</cite>, the
+Jacobian is structured in dimensions <cite>[y_shape, flattened_x_shape]</cite>.
+Note that <cite>y_shape</cite> can contain multiple dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> or </em><a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – Input tensor or sequence of tensors with the
+parameters to which the Jacobian should be computed. Important:
+the <cite>requires_grad</cite> attribute of input needs to be <cite>True</cite> while
+computing output in the forward pass.</p></li>
+<li><p><strong>y</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – Output tensor with the values of which the
+Jacobian is computed.</p></li>
+<li><p><strong>structured_tensor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – A flag indicating if the Jacobian should be
+structured in a tensor of shape <cite>[y_shape, flattened_x_shape]</cite>
+instead of <cite>[flattened_y_shape, flattened_x_shape]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>2D tensor containing the Jacobian of output with</dt><dd><p>respect to input if <cite>structured_tensor</cite> is <cite>False</cite>.
+If <cite>structured_tensor</cite> is <cite>True</cite>, the Jacobian is structured in a
+tensor of shape <cite>[y_shape, flattened_x_shape]</cite>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.contains_nan">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">contains_nan</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">max_value=inf</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#contains_nan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.contains_nan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether a tensor contains a NaN or an infinity value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a>) – The input.</p></li>
+<li><p><strong>max_value</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The highest acceptable value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Whether the tensor contains a NaN or infinity.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.cross_entropy">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">cross_entropy</code><span class="sig-paren">(</span><em class="sig-param">predictions</em>, <em class="sig-param">targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#cross_entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.cross_entropy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Home-made implementation of the cross-entropy.</p>
+<p>The mean or sum reduction is applied outside.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>predictions</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The predictions.</p></li>
+<li><p><strong>targets</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The targets.</p></li>
+<li><p><strong>reduction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of reduction: <cite>mean</cite> or <cite>sum</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The loss for all items in the mini-batch.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.cross_entropy_fn">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">cross_entropy_fn</code><span class="sig-paren">(</span><em class="sig-param">reduction='mean'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#cross_entropy_fn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.cross_entropy_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for the cross entropy function.</p>
+<p>We reimplement the cross-entropy so that we can use soft targets.
+For non one-hot-encodings or soft labels, we use Pytorch’s native
+implementation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>reduction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of reduction: <cite>mean</cite> or <cite>sum</cite>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The loss function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.derivative_leakyrelu">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">derivative_leakyrelu</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#derivative_leakyrelu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.derivative_leakyrelu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of the leaky relu for a given input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The input.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The derivative at the input.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.derivative_relu">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">derivative_relu</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#derivative_relu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.derivative_relu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of the relu for a given input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The input.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The derivative at the input.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.derivative_sigmoid">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">derivative_sigmoid</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#derivative_sigmoid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.derivative_sigmoid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of the sigmoid for a given input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The input.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The derivative at the input.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.derivative_tanh">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">derivative_tanh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#derivative_tanh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.derivative_tanh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of the tanh for a given input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The input.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The derivative at the input.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.euclidean_dist">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">euclidean_dist</code><span class="sig-paren">(</span><em class="sig-param">v1</em>, <em class="sig-param">v2</em>, <em class="sig-param">axis=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#euclidean_dist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.euclidean_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Euclidean distance between two vectors.</p>
+<p>If only 1D vectors, a scalar is returned. If a 2D or 3D matrix is fed,
+the first dimension is interpreted as time and vector/matrix distance
+is computed along it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v1</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The first vector.</p></li>
+<li><p><strong>v2</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The second vector.</p></li>
+<li><p><strong>axis</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The axis along which to compute the norm.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The distance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.flatten_list">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">flatten_list</code><span class="sig-paren">(</span><em class="sig-param">unflattened_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#flatten_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.flatten_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flatten list possibly containing lists within elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>unflattened_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a>) – The list to be flattened.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The flattened list.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)">list</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.get_activation_from_id">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">get_activation_from_id</code><span class="sig-paren">(</span><em class="sig-param">nl_id</em>, <em class="sig-param">grad=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#get_activation_from_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.get_activation_from_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>From the activation id, return the function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nl_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The non-linearity id.</p></li>
+<li><p><strong>grad</strong> (<em>boolean</em>) – Whether to return to gradient function instead of the
+activation itself.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The nonlinearity function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.get_jacobian_slice">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">get_jacobian_slice</code><span class="sig-paren">(</span><em class="sig-param">network</em>, <em class="sig-param">layer_idx</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#get_jacobian_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.get_jacobian_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the start and end indices of the columns in <cite>J</cite> that correspond
+to the network layer with index <cite>layer_idx</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network</strong> – The network.</p></li>
+<li><p><strong>layer_idx</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The index of the layer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>neuron_index_start</strong>: The index of the first neuron of the layer.</p></li>
+<li><p><strong>neuron_index_end</strong>: The index of the last neuron of the layer.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.nullspace">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">nullspace</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">tol=1e-12</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#nullspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.nullspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the nullspace of a certain matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A matrix.</p></li>
+<li><p><strong>tol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The tolerance level for determining what the nullspace is.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A matrix with vectors in the nullspace.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.nullspace_relative_norm">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">nullspace_relative_norm</code><span class="sig-paren">(</span><em class="sig-param">A</em>, <em class="sig-param">x</em>, <em class="sig-param">tol=1e-12</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#nullspace_relative_norm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.nullspace_relative_norm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the ratio between the norm of components of <cite>x</cite> that are in the
+nullspace of <cite>A</cite> and the norm of <cite>x</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A matrix.</p></li>
+<li><p><strong>x</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A certain vector.</p></li>
+<li><p><strong>tol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The tolerance level for determining what the nullspace is.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The ratio.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.outer">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">outer</code><span class="sig-paren">(</span><em class="sig-param">v1</em>, <em class="sig-param">v2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#outer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.outer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the outer product between two vectors.</p>
+<p>Simple wrapper to deal with several torch versions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v1</strong> – The first vector.</p></li>
+<li><p><strong>v2</strong> – The second vector.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The outer product.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.split_in_layers">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">split_in_layers</code><span class="sig-paren">(</span><em class="sig-param">network</em>, <em class="sig-param">layers_concat</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#split_in_layers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.split_in_layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split a Tensor containing the concatenated layer activations.</p>
+<p>Split a Tensor containing the concatenated layer activations for a
+minibatch into a list containing the activations of layer <code class="docutils literal notranslate"><span class="pre">i</span></code> at
+index <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network</strong> – The network.</p></li>
+<li><p><strong>layers_concat</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – A tensor of dimension
+<img class="math" src="_images/math/7630480a86e97cc1955f06a8ee342918cd93db6d.png" alt="B \times \sum_{l=1}^L n_l"/> containing the concatenated
+layer activations..</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A list containing values of <code class="docutils literal notranslate"><span class="pre">layers_concat</span></code> corresponding</dt><dd><p>to the activations of layer <code class="docutils literal notranslate"><span class="pre">i</span></code> at index <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)">list</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.math_utils.vectorize_tensor_list">
+<code class="sig-prename descclassname">utils.math_utils.</code><code class="sig-name descname">vectorize_tensor_list</code><span class="sig-paren">(</span><em class="sig-param">tensor_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/math_utils.html#vectorize_tensor_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.math_utils.vectorize_tensor_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Vectorize all tensors in list.</p>
+<p>The tensors are all vectorized and concatenated in one single vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>list</strong><strong>)</strong> – The list of tensors.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The vectorized form.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)">torch.Tensor</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-utils.optimizer_utils"></span><div class="section" id="helper-functions-for-building-optimizers">
+<h3><a class="toc-backref" href="#id6">Helper functions for building optimizers</a><a class="headerlink" href="#helper-functions-for-building-optimizers" title="Permalink to this headline">¶</a></h3>
+<p>A collection of functions for building a custom set of optimizers.</p>
+<dl class="class">
+<dt id="utils.optimizer_utils.OptimizerList">
+<em class="property">class </em><code class="sig-prename descclassname">utils.optimizer_utils.</code><code class="sig-name descname">OptimizerList</code><span class="sig-paren">(</span><em class="sig-param">params_list</em>, <em class="sig-param">lr=0.001</em>, <em class="sig-param">optimizer_type='SGD'</em>, <em class="sig-param">network_type='BP'</em>, <em class="sig-param">no_bias=False</em>, <em class="sig-param">momentum=0</em>, <em class="sig-param">weight_decay=0</em>, <em class="sig-param">adam_beta1=0.99</em>, <em class="sig-param">adam_beta2=0.99</em>, <em class="sig-param">adam_epsilon=1e-08</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#OptimizerList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.OptimizerList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>An optimizer instance that handles layer-specific specifications.</p>
+<p>This class stacks a separate optimizer for each layer in a list. If
+no separate learning rates per layer are required, a single optimizer is
+stored in the optimizer list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a>) – The parameters to be optimized.</p></li>
+<li><p><strong>lr</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The learning rate.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>optimizer_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The optimizer type.</p></li>
+<li><p><strong>no_bias</strong> (<em>boolean</em>) – Whether no bias terms are learned.</p></li>
+<li><p><strong>momentum</strong> (<em>boolean</em>) – The momentum value.</p></li>
+<li><p><strong>forward_wd</strong> (<em>boolean</em>) – The forward weight decay value.</p></li>
+<li><p><strong>adam_beta1</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – beta1 value for Adam.</p></li>
+<li><p><strong>adam_beta2</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – beta2 value for Adam.</p></li>
+<li><p><strong>adam_epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – epsilon value for Adam.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="utils.optimizer_utils.OptimizerList.log_info">
+<code class="sig-name descname">log_info</code><span class="sig-paren">(</span><em class="sig-param">logger</em>, <em class="sig-param">opt_loc=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#OptimizerList.log_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.OptimizerList.log_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display information about optimizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logger</strong> – The logger.</p></li>
+<li><p><strong>opt_loc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of optimizer (forward, feedback…).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.optimizer_utils.OptimizerList.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param">i=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#OptimizerList.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.OptimizerList.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a step on the optimizer in all or a single specific layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>i</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The layer where to perform the step. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, then the
+step is made on all optimizers.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="utils.optimizer_utils.OptimizerList.zero_grad">
+<code class="sig-name descname">zero_grad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#OptimizerList.zero_grad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.OptimizerList.zero_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set all the gradients to zero.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.optimizer_utils.build_optimizer">
+<code class="sig-prename descclassname">utils.optimizer_utils.</code><code class="sig-name descname">build_optimizer</code><span class="sig-paren">(</span><em class="sig-param">params</em>, <em class="sig-param">optimizer_type='SGD'</em>, <em class="sig-param">lr=0.001</em>, <em class="sig-param">weight_decay=0</em>, <em class="sig-param">momentum=0</em>, <em class="sig-param">adam_beta1=0.99</em>, <em class="sig-param">adam_beta2=0.99</em>, <em class="sig-param">adam_epsilon=1e-08</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#build_optimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.build_optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build optimizer given a certain set of parameters to be optimized.</p>
+<p>This function can be used for building forward and backward optimizers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params</strong> – The parameters to be optimized.</p></li>
+<li><p><strong>optimizer_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The name of the optimizer.</p></li>
+<li><p><strong>lr</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The learning rate.</p></li>
+<li><p><strong>weight_decay</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The weight decay.</p></li>
+<li><p><strong>momentum</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The momentum for SGD and RMSprop optimizers.</p></li>
+<li><p><strong>adam_beta1</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – beta1 value for Adam.</p></li>
+<li><p><strong>adam_beta2</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – beta2 value for Adam.</p></li>
+<li><p><strong>adam_epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – epsilon value for Adam.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The optimizer.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.optimizer_utils.extract_parameters">
+<code class="sig-prename descclassname">utils.optimizer_utils.</code><code class="sig-name descname">extract_parameters</code><span class="sig-paren">(</span><em class="sig-param">net</em>, <em class="sig-param">config</em>, <em class="sig-param">network_type</em>, <em class="sig-param">params_type='forward'</em>, <em class="sig-param">return_nones=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#extract_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.extract_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract list of parameters to be optimized.</p>
+<p>This function can utilize the native functions of the networks that directly
+provide the list of parameters, but here we additionally look at the command
+line arguments and see whether some options freeze certain of those
+parameters.</p>
+<p>By default, a list of the parameters to be learned is returned. However, if
+the option <cite>return_nones</cite> is activated, the list of parameters might have
+<cite>None</cite> for those layer parameters that exist but shouldn’t be learned. This
+is useful, for example, when generating the optimizer in case there is a
+per-layer learning rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net</strong> – The network.</p></li>
+<li><p><strong>config</strong> – The command-line arguments.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>params_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of parameters, for DFC networks. Can be
+<cite>forward</cite> or <cite>feedback</cite>.</p></li>
+<li><p><strong>return_nones</strong> (<em>boolean</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The parameters to be optimized.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)">list</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.optimizer_utils.get_optimizers">
+<code class="sig-prename descclassname">utils.optimizer_utils.</code><code class="sig-name descname">get_optimizers</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">net</em>, <em class="sig-param">network_type='BP'</em>, <em class="sig-param">logger=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/optimizer_utils.html#get_optimizers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.optimizer_utils.get_optimizers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the optimizers based on command line arguments.</p>
+<p>Returns optimizers for forward weights and when necessary of feedback and
+feedback weight initialization as well.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The command-line arguments.</p></li>
+<li><p><strong>net</strong> – The network.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>logger</strong> – The logger. If <cite>None</cite> nothing will be logged.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary containing forward, feedback and feedback init</dt><dd><p>optimizers, if required.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-utils.sim_utils"></span><div class="section" id="helper-functions-for-simulations">
+<h3><a class="toc-backref" href="#id7">Helper functions for simulations</a><a class="headerlink" href="#helper-functions-for-simulations" title="Permalink to this headline">¶</a></h3>
+<p>A collection of helper functions for simulations to keep other scripts clean.</p>
+<dl class="function">
+<dt id="utils.sim_utils.add_summary_to_writer">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">add_summary_to_writer</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">shared</em>, <em class="sig-param">writer</em>, <em class="sig-param">epoch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#add_summary_to_writer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.add_summary_to_writer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write information of training into the writer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The command line arguments.</p></li>
+<li><p><strong>shared</strong> – The shared object.</p></li>
+<li><p><strong>train_var</strong> – The training results.</p></li>
+<li><p><strong>epoch</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The current epoch.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.backup_cli_command">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">backup_cli_command</code><span class="sig-paren">(</span><em class="sig-param">config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#backup_cli_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.backup_cli_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the curret CLI call into a script.</p>
+<p>This will make it very easy to reproduce a run, by just copying the call
+from the script in the output folder. However, this call might be ambiguous
+in case default values have changed. In contrast, all default values are
+backed up in the file <code class="docutils literal notranslate"><span class="pre">config.json</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>config</strong> – Command-line arguments.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.get_summary_keys">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">get_summary_keys</code><span class="sig-paren">(</span><em class="sig-param">classification</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#get_summary_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.get_summary_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the required summary keys for the experiment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>classification</strong> (<em>boolean</em>) – Whether it is a classification task.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of keys.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.initialize_train_var_holder">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">initialize_train_var_holder</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">network_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#initialize_train_var_holder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.initialize_train_var_holder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a holder for all training results collected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The command line arguments.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The variable holder.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(Namespace)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.list_to_str">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">list_to_str</code><span class="sig-paren">(</span><em class="sig-param">list_arg</em>, <em class="sig-param">delim=' '</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#list_to_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.list_to_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a list of numbers into a string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>list_arg</strong> – List of numbers.</p></li>
+<li><p><strong>delim</strong> (<em>optional</em>) – Delimiter between numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List converted to string.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.log_stats_to_writer">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">log_stats_to_writer</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">writer</em>, <em class="sig-param">step</em>, <em class="sig-param">net</em>, <em class="sig-param">init=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#log_stats_to_writer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.log_stats_to_writer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save logs and plots for the current mini-batch on tensorboardX.</p>
+<p>Saves information about feedback and forward weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> (<em>Namespace</em>) – commandline arguments</p></li>
+<li><p><strong>writer</strong> (<em>SummaryWriter</em>) – TensorboardX summary writer</p></li>
+<li><p><strong>step</strong> – global step</p></li>
+<li><p><strong>net</strong> (<em>networks.DTPNetwork</em>) – network.</p></li>
+<li><p><strong>init</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – flag indicating that the training is in the
+initialization phase (only training the feedback weights).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.save_summary_dict">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">save_summary_dict</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">shared</em>, <em class="sig-param">epoch=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#save_summary_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.save_summary_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a text file in the result folder that gives a quick
+overview over the results achieved so far.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#utils.sim_utils.setup_summary_dict" title="utils.sim_utils.setup_summary_dict"><code class="xref py py-func docutils literal notranslate"><span class="pre">setup_summary_dict()</span></code></a>.</p></li>
+<li><p><strong>epoch</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The current epoch. If provided, it will generate another
+performance summary file that will not be overwritten.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.setup_environment">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">setup_environment</code><span class="sig-paren">(</span><em class="sig-param">config</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#setup_environment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.setup_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set up the environment.</p>
+<p>This function should be called at the beginning of a simulation script
+(right after the command-line arguments have been parsed). The setup will
+incorporate:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>creates the output folder</p></li>
+<li><p>initializes the logger</p></li>
+<li><p>makes computation deterministic if necessary</p></li>
+<li><p>selects the torch device</p></li>
+<li><p>creates Tensorboard writer</p></li>
+<li><p>stores the command line arguments</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>config</strong> – Command-line arguments.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>device</strong>: Torch device to be used.</p></li>
+<li><p><strong>writer</strong>: Tensorboard writer. Note, you still have to close the
+writer manually!</p></li>
+<li><p><strong>logger</strong>: Console (and file) logger.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.10)">tuple</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.setup_summary_dict">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">setup_summary_dict</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">shared</em>, <em class="sig-param">network_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#setup_summary_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.setup_summary_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setup the summary dictionary that is written to the performance
+summary file (in the result folder).</p>
+<p>This function adds this summary dictionary to the shared object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – Command-line arguments</p></li>
+<li><p><strong>shared</strong> – A structure to share important run information.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The shared structure with the empty dictionary added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.sim_utils.update_summary_info">
+<code class="sig-prename descclassname">utils.sim_utils.</code><code class="sig-name descname">update_summary_info</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">shared</em>, <em class="sig-param">network_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/sim_utils.html#update_summary_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.sim_utils.update_summary_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write information of training into the summary dictionary.</p>
+<p>Write information into summary and save new summary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The command line arguments.</p></li>
+<li><p><strong>shared</strong> – The shared object.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The shared object with the summary updated.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>shared</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-utils.train_utils"></span><div class="section" id="helper-functions-for-training-and-testing-networks">
+<h3><a class="toc-backref" href="#id8">Helper functions for training and testing networks</a><a class="headerlink" href="#helper-functions-for-training-and-testing-networks" title="Permalink to this headline">¶</a></h3>
+<p>A collection of functions for training and testing networks.</p>
+<dl class="function">
+<dt id="utils.train_utils.compute_accuracy">
+<code class="sig-prename descclassname">utils.train_utils.</code><code class="sig-name descname">compute_accuracy</code><span class="sig-paren">(</span><em class="sig-param">predictions</em>, <em class="sig-param">labels</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/train_utils.html#compute_accuracy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.train_utils.compute_accuracy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the average accuracy of the given predictions.</p>
+<p>Inspired by
+<a class="reference external" href="https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html">https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>predictions</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – Tensor containing the output of the linear
+output layer of the network.</p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – Tensor containing the labels of the mini-batch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Average accuracy of the given predictions.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)">float</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.train_utils.test">
+<code class="sig-prename descclassname">utils.train_utils.</code><code class="sig-name descname">test</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em>, <em class="sig-param">writer</em>, <em class="sig-param">shared</em>, <em class="sig-param">dloader</em>, <em class="sig-param">net</em>, <em class="sig-param">loss_fn</em>, <em class="sig-param">network_type</em>, <em class="sig-param">data_split='test'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/train_utils.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.train_utils.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <a class="reference internal" href="#utils.train_utils.train" title="utils.train_utils.train"><code class="xref py py-func docutils literal notranslate"><span class="pre">train()</span></code></a>.</p></li>
+<li><p><strong>data_split</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The test split to use: <cite>test</cite> or <cite>validation</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>test_loss</strong>: The average test loss.</p></li>
+<li><dl class="simple">
+<dt><strong>test_acc</strong>: The average test accuracy. <code class="docutils literal notranslate"><span class="pre">None</span></code> for non</dt><dd><p>classification tasks.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.train_utils.train">
+<code class="sig-prename descclassname">utils.train_utils.</code><code class="sig-name descname">train</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em>, <em class="sig-param">writer</em>, <em class="sig-param">dloader</em>, <em class="sig-param">net</em>, <em class="sig-param">optimizers</em>, <em class="sig-param">shared</em>, <em class="sig-param">network_type</em>, <em class="sig-param">loss_fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/train_utils.html#train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.train_utils.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The command-line arguments.</p></li>
+<li><p><strong>logger</strong> – The logger.</p></li>
+<li><p><strong>device</strong> – The cuda device.</p></li>
+<li><p><strong>writer</strong> – The tensorboard writer.</p></li>
+<li><p><strong>dloader</strong> – The dataset.</p></li>
+<li><p><strong>net</strong> – The network.</p></li>
+<li><p><strong>optimizers</strong> – The optimizers.</p></li>
+<li><p><strong>shared</strong> – Shared object with task information.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>loss_fn</strong> – The loss function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The shared object containing summary information.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)">dict</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.train_utils.train_epoch_forward">
+<code class="sig-prename descclassname">utils.train_utils.</code><code class="sig-name descname">train_epoch_forward</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em>, <em class="sig-param">writer</em>, <em class="sig-param">shared</em>, <em class="sig-param">dloader</em>, <em class="sig-param">net</em>, <em class="sig-param">optimizers</em>, <em class="sig-param">loss_fn</em>, <em class="sig-param">network_type</em>, <em class="sig-param">epoch=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/train_utils.html#train_epoch_forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.train_utils.train_epoch_forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train forward weights for one epoch.</p>
+<p>For backpropagation, remember that forward and feedback parameters are one
+and the same, so this function is equivalent to normal training.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> (<em>Namespace</em>) – The command-line arguments.</p></li>
+<li><p><strong>logger</strong> – The logger.</p></li>
+<li><p><strong>device</strong> – The PyTorch device to be used.</p></li>
+<li><p><strong>writer</strong> (<em>SummaryWriter</em>) – TensorboardX summary writer to save logs.</p></li>
+<li><p><strong>shared</strong> – Shared object with task information.</p></li>
+<li><p><strong>dloader</strong> – The dataset.</p></li>
+<li><p><strong>net</strong> – The neural network.</p></li>
+<li><p><strong>optimizers</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><em>dict</em></a>) – The optimizers.</p></li>
+<li><p><strong>loss_fn</strong> – The loss function to use.</p></li>
+<li><p><strong>network_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The type of network.</p></li>
+<li><p><strong>epoch</strong> – The current epoch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Tuple containing:</p>
+<ul class="simple">
+<li><p><strong>epoch_losses</strong>: The list of losses in all batches of the epoch.</p></li>
+<li><dl class="simple">
+<dt><strong>epoch_accs</strong>: The list of accuracies in all batches of the epoch.</dt><dd><p><code class="docutils literal notranslate"><span class="pre">None</span></code> for non classification tasks.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-utils.plt_utils"></span><div class="section" id="helper-functions-for-plotting">
+<h3><a class="toc-backref" href="#id9">Helper functions for plotting</a><a class="headerlink" href="#helper-functions-for-plotting" title="Permalink to this headline">¶</a></h3>
+<p>A collection of functions for plotting.</p>
+<dl class="function">
+<dt id="utils.plt_utils.plot_auto_reconstructions">
+<code class="sig-prename descclassname">utils.plt_utils.</code><code class="sig-name descname">plot_auto_reconstructions</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">writer</em>, <em class="sig-param">inputs</em>, <em class="sig-param">predictions</em>, <em class="sig-param">num_images=5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/plt_utils.html#plot_auto_reconstructions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#utils.plt_utils.plot_auto_reconstructions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot MNIST autoencoding reconstructions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – The config.</p></li>
+<li><p><strong>writer</strong> – The tensorboard writer.</p></li>
+<li><p><strong>inputs</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The inputs.</p></li>
+<li><p><strong>predictions</strong> (<a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch v1.12)"><em>torch.Tensor</em></a>) – The predictions.</p></li>
+<li><p><strong>num_images</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The number of images to print.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">Networks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-notes">General Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-utils.args">API</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="networks.html" title="previous chapter">Networks</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

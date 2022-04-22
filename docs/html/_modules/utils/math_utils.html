@@ -1,0 +1,561 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils.math_utils &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.math_utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :utils/math_utils.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :25/08/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Utilities for mathematical computations</span>
+<span class="sd">---------------------------------------</span>
+
+<span class="sd">Functions required for mathematical computations.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="c1"># Define the activation functions.</span>
+<span class="n">ACTIVATION_FUNCTIONS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;linear&#39;</span><span class="p">:</span>    <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="s1">&#39;fn&#39;</span><span class="p">:</span>   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mf">1.</span><span class="o">*</span><span class="n">x</span><span class="p">,</span>
+                  <span class="s1">&#39;grad&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)},</span>
+    <span class="s1">&#39;tanh&#39;</span><span class="p">:</span>      <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                  <span class="s1">&#39;fn&#39;</span><span class="p">:</span>   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                  <span class="s1">&#39;grad&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">derivative_tanh</span><span class="p">(</span><span class="n">x</span><span class="p">)},</span>
+    <span class="s1">&#39;relu&#39;</span><span class="p">:</span>      <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                  <span class="s1">&#39;fn&#39;</span><span class="p">:</span>   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                  <span class="s1">&#39;grad&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">derivative_relu</span><span class="p">(</span><span class="n">x</span><span class="p">)},</span>
+    <span class="s1">&#39;leakyrelu&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+                  <span class="s1">&#39;fn&#39;</span><span class="p">:</span>   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">F</span><span class="o">.</span><span class="n">leaky_relu</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+                  <span class="s1">&#39;grad&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">derivative_leakyrelu</span><span class="p">(</span><span class="n">x</span><span class="p">)},</span>
+    <span class="s1">&#39;sigmoid&#39;</span><span class="p">:</span>   <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+                  <span class="s1">&#39;fn&#39;</span><span class="p">:</span>   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                  <span class="s1">&#39;grad&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">derivative_sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)}</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="get_activation_from_id"><a class="viewcode-back" href="../../utils.html#utils.math_utils.get_activation_from_id">[docs]</a><span class="k">def</span> <span class="nf">get_activation_from_id</span><span class="p">(</span><span class="n">nl_id</span><span class="p">,</span> <span class="n">grad</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;From the activation id, return the function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        nl_id (int): The non-linearity id.</span>
+<span class="sd">        grad (boolean): Whether to return to gradient function instead of the</span>
+<span class="sd">            activation itself.</span>
+
+<span class="sd">    Return:</span>
+<span class="sd">        The nonlinearity function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">nl_id</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s1">&#39;fn&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">grad</span> <span class="k">else</span> <span class="s1">&#39;grad&#39;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="compute_jacobian"><a class="viewcode-back" href="../../utils.html#utils.math_utils.compute_jacobian">[docs]</a><span class="k">def</span> <span class="nf">compute_jacobian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">structured_tensor</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                     <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the Jacobian matrix of output with respect to input.</span>
+
+<span class="sd">    If input and/or output have more than one dimension, the Jacobian of the</span>
+<span class="sd">    flattened output with respect to the flattened input is returned if</span>
+<span class="sd">    `structured_tensor` is `False`. If `structured_tensor` is `True`, the </span>
+<span class="sd">    Jacobian is structured in dimensions `[y_shape, flattened_x_shape]`.</span>
+<span class="sd">    Note that `y_shape` can contain multiple dimensions.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        x (list or torch.Tensor): Input tensor or sequence of tensors with the</span>
+<span class="sd">            parameters to which the Jacobian should be computed. Important:</span>
+<span class="sd">            the `requires_grad` attribute of input needs to be `True` while</span>
+<span class="sd">            computing output in the forward pass.</span>
+<span class="sd">        y (torch.Tensor): Output tensor with the values of which the</span>
+<span class="sd">            Jacobian is computed.</span>
+<span class="sd">        structured_tensor (bool): A flag indicating if the Jacobian should be</span>
+<span class="sd">            structured in a tensor of shape `[y_shape, flattened_x_shape]`</span>
+<span class="sd">            instead of `[flattened_y_shape, flattened_x_shape]`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): 2D tensor containing the Jacobian of output with</span>
+<span class="sd">            respect to input if `structured_tensor` is `False`.</span>
+<span class="sd">            If `structured_tensor` is `True`, the Jacobian is structured in a</span>
+<span class="sd">            tensor of shape `[y_shape, flattened_x_shape]`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+
+    <span class="c1"># Create the empty Jacobian.</span>
+    <span class="n">output_flat</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">numel_input</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">input_tensor</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
+        <span class="n">numel_input</span> <span class="o">+=</span> <span class="n">input_tensor</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span>
+    <span class="n">jacobian</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">numel</span><span class="p">(),</span> <span class="n">numel_input</span><span class="p">)</span>
+
+    <span class="c1"># Compute the Jacobian.</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">output_elem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">output_flat</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">output_flat</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">gradients</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">output_elem</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span>
+                                            <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">,</span>
+                                            <span class="n">create_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                            <span class="n">only_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gradients</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">output_elem</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span>
+                                            <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                            <span class="n">create_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                            <span class="n">only_inputs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">jacobian_row</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">g</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gradients</span><span class="p">])</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">jacobian_row</span>
+
+    <span class="k">if</span> <span class="n">structured_tensor</span><span class="p">:</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">shape</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> 
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="n">jacobian</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jacobian</span></div>
+
+<div class="viewcode-block" id="nullspace"><a class="viewcode-back" href="../../utils.html#utils.math_utils.nullspace">[docs]</a><span class="k">def</span> <span class="nf">nullspace</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the nullspace of a certain matrix.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A (torch.Tensor): A matrix.</span>
+<span class="sd">        tol (float): The tolerance level for determining what the nullspace is.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): A matrix with vectors in the nullspace.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">some</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">S</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">tol</span><span class="p">:</span>
+        <span class="n">null_start</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">null_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">S</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">S</span><span class="o">&lt;</span><span class="n">tol</span><span class="p">))</span>
+    <span class="n">V_null</span> <span class="o">=</span> <span class="n">V</span><span class="p">[:,</span> <span class="n">null_start</span><span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">V_null</span></div>
+
+
+<div class="viewcode-block" id="nullspace_relative_norm"><a class="viewcode-back" href="../../utils.html#utils.math_utils.nullspace_relative_norm">[docs]</a><span class="k">def</span> <span class="nf">nullspace_relative_norm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the ratio between the norm of components of `x` that are in the</span>
+<span class="sd">    nullspace of `A` and the norm of `x`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A (torch.Tensor): A matrix.</span>
+<span class="sd">        x (torch.Tensor): A certain vector.</span>
+<span class="sd">        tol (float): The tolerance level for determining what the nullspace is.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The ratio.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">A_null</span> <span class="o">=</span> <span class="n">nullspace</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+    <span class="n">x_null_coordinates</span> <span class="o">=</span> <span class="n">A_null</span><span class="o">.</span><span class="n">t</span><span class="p">()</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">x_null_coordinates</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="o">/</span><span class="n">x</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ratio</span></div>
+
+<div class="viewcode-block" id="derivative_sigmoid"><a class="viewcode-back" href="../../utils.html#utils.math_utils.derivative_sigmoid">[docs]</a><span class="k">def</span> <span class="nf">derivative_sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the derivative of the sigmoid for a given input.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor): The input.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The derivative at the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="derivative_relu"><a class="viewcode-back" href="../../utils.html#utils.math_utils.derivative_relu">[docs]</a><span class="k">def</span> <span class="nf">derivative_relu</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the derivative of the relu for a given input.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor): The input.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The derivative at the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">grad</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">grad</span></div>
+
+<div class="viewcode-block" id="derivative_leakyrelu"><a class="viewcode-back" href="../../utils.html#utils.math_utils.derivative_leakyrelu">[docs]</a><span class="k">def</span> <span class="nf">derivative_leakyrelu</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the derivative of the leaky relu for a given input.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor): The input.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The derivative at the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">grad</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="k">return</span> <span class="n">grad</span></div>
+
+<div class="viewcode-block" id="derivative_tanh"><a class="viewcode-back" href="../../utils.html#utils.math_utils.derivative_tanh">[docs]</a><span class="k">def</span> <span class="nf">derivative_tanh</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the derivative of the tanh for a given input.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor): The input.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The derivative at the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span></div>
+
+<div class="viewcode-block" id="outer"><a class="viewcode-back" href="../../utils.html#utils.math_utils.outer">[docs]</a><span class="k">def</span> <span class="nf">outer</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the outer product between two vectors.</span>
+<span class="sd">    </span>
+<span class="sd">    Simple wrapper to deal with several torch versions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        v1: The first vector.</span>
+<span class="sd">        v2: The second vector.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The outer product.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ger</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="contains_nan"><a class="viewcode-back" href="../../utils.html#utils.math_utils.contains_nan">[docs]</a><span class="k">def</span> <span class="nf">contains_nan</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Check whether a tensor contains a NaN or an infinity value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor or list): The input.</span>
+<span class="sd">        max_value (float): The highest acceptable value.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (bool): Whether the tensor contains a NaN or infinity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nb_nans</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">nb_infs</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
+            <span class="n">nb_nans</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">el</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">nb_infs</span> <span class="o">+=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">nb_nans</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">nb_infs</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">nb_nans</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">nb_infs</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="euclidean_dist"><a class="viewcode-back" href="../../utils.html#utils.math_utils.euclidean_dist">[docs]</a><span class="k">def</span> <span class="nf">euclidean_dist</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the Euclidean distance between two vectors.</span>
+
+<span class="sd">    If only 1D vectors, a scalar is returned. If a 2D or 3D matrix is fed,</span>
+<span class="sd">    the first dimension is interpreted as time and vector/matrix distance</span>
+<span class="sd">    is computed along it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        v1 (torch.Tensor): The first vector.</span>
+<span class="sd">        v2 (torch.Tensor): The second vector.</span>
+<span class="sd">        axis (int): The axis along which to compute the norm.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The distance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> 
+            <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span>        <span class="c1"># normal 1D vectors</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">v1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span>        <span class="c1"># time x vector matrix, calculate along time</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">v1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># time x batch x vector matrix, calculate along time</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v1</span> <span class="o">-</span> <span class="n">v2</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">axis</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v1</span> <span class="o">-</span> <span class="n">v2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Invalid types </span><span class="si">{}</span><span class="s1">,</span><span class="si">{}</span><span class="s1"> for dist function&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">v1</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">v2</span><span class="p">)))</span>
+
+    <span class="k">return</span> <span class="n">d</span></div>
+
+<div class="viewcode-block" id="bool_to_indices"><a class="viewcode-back" href="../../utils.html#utils.math_utils.bool_to_indices">[docs]</a><span class="k">def</span> <span class="nf">bool_to_indices</span><span class="p">(</span><span class="n">bool_vector</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert an array of boolean indices to integer indices.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bool_vector (torch.Tensor): A vector of booleans.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (list): The list of indices that are ``True``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">indices_int</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bool_vector</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">bool_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">indices_int</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">indices_int</span></div>
+
+<div class="viewcode-block" id="get_jacobian_slice"><a class="viewcode-back" href="../../utils.html#utils.math_utils.get_jacobian_slice">[docs]</a><span class="k">def</span> <span class="nf">get_jacobian_slice</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">layer_idx</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the start and end indices of the columns in `J` that correspond</span>
+<span class="sd">    to the network layer with index `layer_idx`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        network: The network.</span>
+<span class="sd">        layer_idx (int): The index of the layer.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (....): Tuple containing:</span>
+
+<span class="sd">        - **neuron_index_start**: The index of the first neuron of the layer.</span>
+<span class="sd">        - **neuron_index_end**: The index of the last neuron of the layer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">layer_output_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">layers</span><span class="p">]</span>
+    <span class="n">neuron_index_start</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">layer_output_dims</span><span class="p">[:</span><span class="n">layer_idx</span><span class="p">])</span>
+    <span class="n">neuron_index_end</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">layer_output_dims</span><span class="p">[:(</span><span class="n">layer_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+
+    <span class="k">return</span> <span class="n">neuron_index_start</span><span class="p">,</span> <span class="n">neuron_index_end</span></div>
+
+<div class="viewcode-block" id="split_in_layers"><a class="viewcode-back" href="../../utils.html#utils.math_utils.split_in_layers">[docs]</a><span class="k">def</span> <span class="nf">split_in_layers</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">layers_concat</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Split a Tensor containing the concatenated layer activations.</span>
+
+<span class="sd">    Split a Tensor containing the concatenated layer activations for a</span>
+<span class="sd">    minibatch into a list containing the activations of layer ``i`` at</span>
+<span class="sd">    index ``i``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        network: The network.</span>
+<span class="sd">        layers_concat (torch.Tensor): A tensor of dimension</span>
+<span class="sd">            :math:`B \times \sum_{l=1}^L n_l` containing the concatenated</span>
+<span class="sd">            layer activations..</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (list): A list containing values of ``layers_concat`` corresponding</span>
+<span class="sd">            to the activations of layer ``i`` at index ``i``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">layer_output_dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">layers</span><span class="p">]</span>
+    <span class="n">start_output_limits</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">layer_output_dims</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>
+                           <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">layers</span><span class="p">))]</span>
+    <span class="n">end_output_limits</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">layer_output_dims</span><span class="p">[:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>
+                         <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">layers</span><span class="p">))]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers_concat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># to avoid errors when batch_size==1</span>
+        <span class="n">layers_concat</span> <span class="o">=</span> <span class="n">layers_concat</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">layers_concat</span><span class="p">[:,</span> <span class="n">start_output_limits</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span><span class="n">end_output_limits</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+                             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">layers</span><span class="p">))]</span></div>
+
+<div class="viewcode-block" id="flatten_list"><a class="viewcode-back" href="../../utils.html#utils.math_utils.flatten_list">[docs]</a><span class="k">def</span> <span class="nf">flatten_list</span><span class="p">(</span><span class="n">unflattened_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Flatten list possibly containing lists within elements.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        unflattened_list (list): The list to be flattened.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (list): The flattened list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">flattened_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">li</span> <span class="ow">in</span> <span class="n">unflattened_list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">li</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">flattened_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">flatten_list</span><span class="p">(</span><span class="n">li</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flattened_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">li</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">flattened_list</span></div>
+
+<div class="viewcode-block" id="compute_angle"><a class="viewcode-back" href="../../utils.html#utils.math_utils.compute_angle">[docs]</a><span class="k">def</span> <span class="nf">compute_angle</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the angle between two tensors of the same size. </span>
+
+<span class="sd">    The tensors will be flattened, after which the angle is computed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        A (torch.Tensor): First tensor.</span>
+<span class="sd">        B (torch.Tensor): Second tensor.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The angle between the two tensors in degrees.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">contains_nan</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Tensor A contains NaNs, computing angle anyways.&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">contains_nan</span><span class="p">(</span><span class="n">B</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Tensor B contains NaNs, computing angle anyways.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Compute cosine angle.</span>
+    <span class="n">inner_product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="o">*</span><span class="n">B</span><span class="p">)</span> <span class="c1"># equal to inner product of flattened tensors</span>
+    <span class="n">cosine</span> <span class="o">=</span> <span class="n">inner_product</span><span class="o">/</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="s1">&#39;fro&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="s1">&#39;fro&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">cosine</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">cosine</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">:</span>
+        <span class="n">cosine</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="mf">1.</span><span class="p">])</span>
+
+    <span class="c1"># Convert to degrees.</span>
+    <span class="n">angle</span> <span class="o">=</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">acos</span><span class="p">(</span><span class="n">cosine</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">contains_nan</span><span class="p">(</span><span class="n">angle</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Angle computation causes NaNs.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">angle</span></div>
+
+<div class="viewcode-block" id="vectorize_tensor_list"><a class="viewcode-back" href="../../utils.html#utils.math_utils.vectorize_tensor_list">[docs]</a><span class="k">def</span> <span class="nf">vectorize_tensor_list</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Vectorize all tensors in list.</span>
+
+<span class="sd">    The tensors are all vectorized and concatenated in one single vector.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (list): The list of tensors.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor): The vectorized form.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">t</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tensor_list</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="cross_entropy"><a class="viewcode-back" href="../../utils.html#utils.math_utils.cross_entropy">[docs]</a><span class="k">def</span> <span class="nf">cross_entropy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Home-made implementation of the cross-entropy.</span>
+
+<span class="sd">    The mean or sum reduction is applied outside.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        predictions (torch.Tensor): The predictions.</span>
+<span class="sd">        targets (torch.Tensor): The targets.</span>
+<span class="sd">        reduction (str): The type of reduction: `mean` or `sum`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): The loss for all items in the mini-batch.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Apply the log softmax.</span>
+    <span class="n">logsoftmax</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Compute categorical cross-entropy, summing across classes.</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">targets</span> <span class="o">*</span> <span class="n">logsoftmax</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">loss</span></div>
+        
+<div class="viewcode-block" id="cross_entropy_fn"><a class="viewcode-back" href="../../utils.html#utils.math_utils.cross_entropy_fn">[docs]</a><span class="k">def</span> <span class="nf">cross_entropy_fn</span><span class="p">(</span><span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper for the cross entropy function.</span>
+
+<span class="sd">    We reimplement the cross-entropy so that we can use soft targets.</span>
+<span class="sd">    For non one-hot-encodings or soft labels, we use Pytorch&#39;s native</span>
+<span class="sd">    implementation.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        reduction (str): The type of reduction: `mean` or `sum`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The loss function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">cross_entropy_mean</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">targets</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">(</span><span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cross_entropy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">cross_entropy_sum</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">targets</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">(</span><span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cross_entropy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">reduction</span> <span class="o">==</span> <span class="s1">&#39;mean&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cross_entropy_mean</span>
+    <span class="k">elif</span> <span class="n">reduction</span> <span class="o">==</span> <span class="s1">&#39;sum&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cross_entropy_sum</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

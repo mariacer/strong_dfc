@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Data &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Networks" href="networks.html" />
+    <link rel="prev" title="Main script to run experiments" href="main.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="data">
+<span id="data-reference-label"></span><h1><a class="toc-backref" href="#id1">Data</a><a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#data" id="id1">Data</a></p>
+<ul>
+<li><p><a class="reference internal" href="#general-notes" id="id2">General Notes</a></p></li>
+<li><p><a class="reference internal" href="#module-datahandlers.dataset" id="id3">API</a></p>
+<ul>
+<li><p><a class="reference internal" href="#implementation-of-a-general-dataset" id="id4">Implementation of a general Dataset</a></p></li>
+<li><p><a class="reference internal" href="#helper-functions-for-generating-different-datasets" id="id5">Helper functions for generating different datasets</a></p></li>
+<li><p><a class="reference internal" href="#mnist-dataset" id="id6">MNIST Dataset</a></p></li>
+<li><p><a class="reference internal" href="#fashion-mnist-dataset" id="id7">Fashion MNIST Dataset</a></p></li>
+<li><p><a class="reference internal" href="#mnist-autoencoder-dataset" id="id8">MNIST Autoencoder Dataset</a></p></li>
+<li><p><a class="reference internal" href="#cifar-10-dataset" id="id9">CIFAR-10 Dataset</a></p></li>
+<li><p><a class="reference internal" href="#teacher-based-dataset" id="id10">Teacher-based Dataset</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="general-notes">
+<h2><a class="toc-backref" href="#id2">General Notes</a><a class="headerlink" href="#general-notes" title="Permalink to this headline">¶</a></h2>
+<p>Datahandlers for different datasets are specified in this module. They should all inherit from the common abstract class <a class="reference internal" href="#module-datahandlers.dataset" title="datahandlers.dataset"><code class="xref py py-mod docutils literal notranslate"><span class="pre">datahandlers.dataset</span></code></a>.</p>
+</div>
+<div class="section" id="module-datahandlers.dataset">
+<span id="api"></span><h2><a class="toc-backref" href="#id3">API</a><a class="headerlink" href="#module-datahandlers.dataset" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="implementation-of-a-general-dataset">
+<h3><a class="toc-backref" href="#id4">Implementation of a general Dataset</a><a class="headerlink" href="#implementation-of-a-general-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Extremely simple implementation of a dataset wrapper.</p>
+<dl class="class">
+<dt id="datahandlers.dataset.DatasetWrapper">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.dataset.</code><code class="sig-name descname">DatasetWrapper</code><span class="sig-paren">(</span><em class="sig-param">trainset</em>, <em class="sig-param">testset</em>, <em class="sig-param">valset=None</em>, <em class="sig-param">name=None</em>, <em class="sig-param">in_size=None</em>, <em class="sig-param">out_size=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/dataset.html#DatasetWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.dataset.DatasetWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Implementation of a simple dataset wrapper.</p>
+<p>Besides containing the train, test and validation sets for a given task,
+some information about the dataset is also contained, like input and
+output size, and whether the targets exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trainset</strong> (<em>torch.utils.data.Dataloader</em>) – The train set.</p></li>
+<li><p><strong>testset</strong> (<em>torch.utils.data.Dataloader</em>) – The test set.</p></li>
+<li><p><strong>valset</strong> (<em>torch.utils.data.Dataloader</em>) – The (optional) validation set.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The name of the dataset.</p></li>
+<li><p><strong>in_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The input size.</p></li>
+<li><p><strong>out_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The output size.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.data_utils"></span><div class="section" id="helper-functions-for-generating-different-datasets">
+<h3><a class="toc-backref" href="#id5">Helper functions for generating different datasets</a><a class="headerlink" href="#helper-functions-for-generating-different-datasets" title="Permalink to this headline">¶</a></h3>
+<p>A collection of helper functions for generating datasets to keep other scripts
+clean.</p>
+<dl class="function">
+<dt id="datahandlers.data_utils.generate_computer_vis_task">
+<code class="sig-prename descclassname">datahandlers.data_utils.</code><code class="sig-name descname">generate_computer_vis_task</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em>, <em class="sig-param">data_dir</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/data_utils.html#generate_computer_vis_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.data_utils.generate_computer_vis_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a computer vision datahandler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – Command-line arguments.</p></li>
+<li><p><strong>logger</strong> – The logger.</p></li>
+<li><p><strong>device</strong> – The cuda device.</p></li>
+<li><p><strong>data_dir</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The data directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See docstring of function <cite>generate_task</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandlers.data_utils.generate_mnist_auto_task">
+<code class="sig-prename descclassname">datahandlers.data_utils.</code><code class="sig-name descname">generate_mnist_auto_task</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em>, <em class="sig-param">data_dir</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/data_utils.html#generate_mnist_auto_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.data_utils.generate_mnist_auto_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate an MNIST autoencoder datahandler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <cite>generate_computer_vision_task</cite>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See docstring of function <cite>generate_task</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandlers.data_utils.generate_student_teacher_task">
+<code class="sig-prename descclassname">datahandlers.data_utils.</code><code class="sig-name descname">generate_student_teacher_task</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/data_utils.html#generate_student_teacher_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.data_utils.generate_student_teacher_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a teacher network-based datahandler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>(</strong><strong>...</strong><strong>)</strong> – See docstring of function <cite>generate_computer_vision_task</cite>.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>See docstring of function <cite>generate_task</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(…)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datahandlers.data_utils.generate_task">
+<code class="sig-prename descclassname">datahandlers.data_utils.</code><code class="sig-name descname">generate_task</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">logger</em>, <em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/data_utils.html#generate_task"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.data_utils.generate_task" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the user defined task.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> – Command-line arguments.</p></li>
+<li><p><strong>logger</strong> – The logger.</p></li>
+<li><p><strong>device</strong> – The cuda device.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A dataset.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference internal" href="#datahandlers.dataset.DatasetWrapper" title="datahandlers.dataset.DatasetWrapper">DatasetWrapper</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.mnist_data"></span><div class="section" id="mnist-dataset">
+<h3><a class="toc-backref" href="#id6">MNIST Dataset</a><a class="headerlink" href="#mnist-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of dataloaders for the MNIST dataset.</p>
+<dl class="class">
+<dt id="datahandlers.mnist_data.MNISTData">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.mnist_data.</code><code class="sig-name descname">MNISTData</code><span class="sig-paren">(</span><em class="sig-param">root</em>, <em class="sig-param">device</em>, <em class="sig-param">double_precision=True</em>, <em class="sig-param">train=True</em>, <em class="sig-param">target_class_value=1</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/mnist_data.html#MNISTData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.mnist_data.MNISTData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.mnist.MNIST</span></code></p>
+<p>An instance of the class represents the MNIST dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – Root directory of dataset</p></li>
+<li><p><strong>device</strong> – The cuda device where to place the dataset.</p></li>
+<li><p><strong>double_precision</strong> (<em>boolean</em>) – Whether precision of 64 floats is used.</p></li>
+<li><p><strong>train</strong> (<em>boolean</em>) – Whether to create the dataset from training data.</p></li>
+<li><p><strong>target_class_value</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The value of the correct class for the
+targets. If set smaller to one, can be used to set soft targets.
+Note that unless a value different than 1 is used, the labels are
+simply the integer values, not one-hot encodings.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.fashionmnist_data"></span><div class="section" id="fashion-mnist-dataset">
+<h3><a class="toc-backref" href="#id7">Fashion MNIST Dataset</a><a class="headerlink" href="#fashion-mnist-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of dataloaders for the Fashion MNIST dataset.</p>
+<dl class="class">
+<dt id="datahandlers.fashionmnist_data.FashionMNISTData">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.fashionmnist_data.</code><code class="sig-name descname">FashionMNISTData</code><span class="sig-paren">(</span><em class="sig-param">root</em>, <em class="sig-param">device</em>, <em class="sig-param">double_precision=True</em>, <em class="sig-param">train=True</em>, <em class="sig-param">target_class_value=1</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/fashionmnist_data.html#FashionMNISTData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.fashionmnist_data.FashionMNISTData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.mnist.FashionMNIST</span></code></p>
+<p>An instance of the class represents the Fashion MNIST dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – Root directory of dataset</p></li>
+<li><p><strong>device</strong> – The cuda device where to place the dataset.</p></li>
+<li><p><strong>double_precision</strong> (<em>boolean</em>) – Whether precision of 64 floats is used.</p></li>
+<li><p><strong>train</strong> (<em>boolean</em>) – Whether to create the dataset from training data.</p></li>
+<li><p><strong>target_class_value</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><em>float</em></a>) – The value of the correct class for the
+targets. If set smaller to one, can be used to set soft targets.
+Note that unless a value different than 1 is used, the labels are
+simply the integer values, not one-hot encodings.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.mnist_auto_data"></span><div class="section" id="mnist-autoencoder-dataset">
+<h3><a class="toc-backref" href="#id8">MNIST Autoencoder Dataset</a><a class="headerlink" href="#mnist-autoencoder-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of dataloaders for the MNIST autoencoding dataset.</p>
+<dl class="class">
+<dt id="datahandlers.mnist_auto_data.MNISTAutoData">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.mnist_auto_data.</code><code class="sig-name descname">MNISTAutoData</code><span class="sig-paren">(</span><em class="sig-param">root</em>, <em class="sig-param">device</em>, <em class="sig-param">double_precision=True</em>, <em class="sig-param">train=True</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/mnist_auto_data.html#MNISTAutoData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.mnist_auto_data.MNISTAutoData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.mnist.MNIST</span></code></p>
+<p>An instance of the class represents the MNIST autoencoding dataset.</p>
+<p>In this dataset, the class labels are replaced by the input images, as
+the goal is to reconstruct them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – Root directory of dataset</p></li>
+<li><p><strong>device</strong> – The cuda device where to place the dataset.</p></li>
+<li><p><strong>double_precision</strong> (<em>boolean</em>) – Whether precision of 64 floats is used.</p></li>
+<li><p><strong>train</strong> (<em>boolean</em>) – Whether to create the dataset from training data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.cifar10_data"></span><div class="section" id="cifar-10-dataset">
+<h3><a class="toc-backref" href="#id9">CIFAR-10 Dataset</a><a class="headerlink" href="#cifar-10-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of dataloaders for the CIFAR-10 dataset.</p>
+<dl class="class">
+<dt id="datahandlers.cifar10_data.CIFAR10Data">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.cifar10_data.</code><code class="sig-name descname">CIFAR10Data</code><span class="sig-paren">(</span><em class="sig-param">root</em>, <em class="sig-param">device</em>, <em class="sig-param">double_precision=True</em>, <em class="sig-param">train=True</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/cifar10_data.html#CIFAR10Data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.cifar10_data.CIFAR10Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.cifar.CIFAR10</span></code></p>
+<p>An instance of the class represents the CIFAR-10 dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – Root directory of dataset</p></li>
+<li><p><strong>device</strong> – The cuda device where to place the dataset.</p></li>
+<li><p><strong>double_precision</strong> (<em>boolean</em>) – Whether precision of 64 floats is used.</p></li>
+<li><p><strong>train</strong> (<em>boolean</em>) – Whether to create the dataset from training data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<span class="target" id="module-datahandlers.student_teacher_data"></span><div class="section" id="teacher-based-dataset">
+<h3><a class="toc-backref" href="#id10">Teacher-based Dataset</a><a class="headerlink" href="#teacher-based-dataset" title="Permalink to this headline">¶</a></h3>
+<p>Implementation of dataloaders for the a teacher network-based dataset.</p>
+<dl class="class">
+<dt id="datahandlers.student_teacher_data.RegressionDataset">
+<em class="property">class </em><code class="sig-prename descclassname">datahandlers.student_teacher_data.</code><code class="sig-name descname">RegressionDataset</code><span class="sig-paren">(</span><em class="sig-param">device, n_in=5, n_out=5, n_hidden=[100, 100], num_data=3000, activation='tanh', double_precision=True, random_seed=42</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/datahandlers/student_teacher_data.html#RegressionDataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#datahandlers.student_teacher_data.RegressionDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.utils.data.dataset.Dataset</span></code></p>
+<p>A teacher network-based regression dataset.</p>
+<p>In this setting, a teacher network is generated, and the dataset is obtained
+by feeding random inputs to this teacher network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>device</strong> – The cuda device where to place the dataset.</p></li>
+<li><p><strong>n_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The dimensionality of the inputs.</p></li>
+<li><p><strong>n_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The dimensionality of the outputs.</p></li>
+<li><p><strong>n_hidden</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a>) – The dimensionality of the hidden layers.</p></li>
+<li><p><strong>num_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The number of datapoints to generate.</p></li>
+<li><p><strong>activation</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><em>str</em></a>) – The activation function to be used.</p></li>
+<li><p><strong>double_precision</strong> (<em>boolean</em>) – Whether precision of 64 floats is used.</p></li>
+<li><p><strong>random_seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – The random seed for data generation.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-notes">General Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-datahandlers.dataset">API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="main.html" title="previous chapter">Main script to run experiments</a></li>
+      <li>Next: <a href="networks.html" title="next chapter">Networks</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/datahandlers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>networks.layer_interface &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for networks.layer_interface</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :networks/layer_interface.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of a pytorch layer to be used within networks</span>
+<span class="sd">------------------------------------------------------------</span>
+
+<span class="sd">Layer module to be used within network classes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">from</span> <span class="nn">tensorboardX</span> <span class="k">import</span> <span class="n">SummaryWriter</span>
+
+<span class="kn">from</span> <span class="nn">utils.math_utils</span> <span class="k">import</span> <span class="n">ACTIVATION_FUNCTIONS</span>
+<span class="kn">from</span> <span class="nn">networks.credit_assignment_functions</span> <span class="k">import</span> <span class="n">non_linear_function</span>
+
+<div class="viewcode-block" id="LayerInterface"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface">[docs]</a><span class="k">class</span> <span class="nc">LayerInterface</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implementation of an abstract layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        in_features (int): The number of pre-neurons.</span>
+<span class="sd">        out_features (int): The number of post-neurons.</span>
+<span class="sd">        last_layer_features (int): The number of neurons in the last layer.</span>
+<span class="sd">            Only provided for direct feedback applications, else ``None``.</span>
+<span class="sd">        bias (boolean): Whether the layer has a bias or not.</span>
+<span class="sd">        requires_grad (boolean): Whether the parameters require a gradient.</span>
+<span class="sd">        forward_activation (str): The forward activation to be used.</span>
+<span class="sd">        initialization (str): The initialization to be used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">last_layer_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">forward_activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">,</span>
+                 <span class="n">initialization</span><span class="o">=</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forward_activation</span> <span class="o">=</span> <span class="n">forward_activation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_requires_grad</span> <span class="o">=</span> <span class="n">requires_grad</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_use_bias</span> <span class="o">=</span> <span class="n">bias</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_features</span> <span class="o">=</span> <span class="n">in_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_features</span> <span class="o">=</span> <span class="n">out_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialization</span> <span class="o">=</span> <span class="n">initialization</span>
+
+        <span class="c1"># Place-holder for storing activations.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Create and initialize layers.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_layer</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_use_bias</span><span class="p">,</span>
+                       <span class="n">requires_grad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_requires_grad</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_layer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="p">,</span>
+                        <span class="n">initialization</span><span class="o">=</span><span class="n">initialization</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;TODO implement function&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s1">&#39;LayerInterface&#39;</span>
+
+<div class="viewcode-block" id="LayerInterface.set_layer"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.set_layer">[docs]</a>    <span class="k">def</span> <span class="nf">set_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create the network parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            in_features (int): The number of pre-neurons.</span>
+<span class="sd">            out_features (int): The number of post-neurons.</span>
+<span class="sd">            use_bias (boolean): Whether a bias should be created.</span>
+<span class="sd">            requires_grad (boolean): Whether the gradient should be computed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">out_features</span><span class="p">,</span> <span class="n">in_features</span><span class="p">),</span>
+                                     <span class="n">requires_grad</span><span class="o">=</span><span class="n">requires_grad</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_bias</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span><span class="n">out_features</span><span class="p">),</span>
+                                      <span class="n">requires_grad</span><span class="o">=</span><span class="n">requires_grad</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="LayerInterface.init_layer"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.init_layer">[docs]</a>    <span class="k">def</span> <span class="nf">init_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">initialization</span><span class="o">=</span><span class="s1">&#39;xavier&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize the network parameters.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">initialization</span> <span class="o">==</span> <span class="s1">&#39;orthogonal&#39;</span><span class="p">:</span>
+            <span class="n">out_features</span><span class="p">,</span> <span class="n">in_features</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span>
+            <span class="n">gain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">6.</span> <span class="o">/</span> <span class="p">(</span><span class="n">in_features</span> <span class="o">+</span> <span class="n">out_features</span><span class="p">))</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">orthogonal_</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">gain</span><span class="o">=</span><span class="n">gain</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">initialization</span> <span class="o">==</span> <span class="s1">&#39;xavier&#39;</span><span class="p">:</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_uniform_</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">initialization</span> <span class="o">==</span> <span class="s1">&#39;xavier_normal&#39;</span><span class="p">:</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_normal_</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">initialization</span> <span class="o">==</span> <span class="s1">&#39;teacher&#39;</span><span class="p">:</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_normal_</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">gain</span><span class="o">=</span><span class="mf">3.</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">initialization</span> <span class="o">==</span> <span class="s1">&#39;ones&#39;</span><span class="p">:</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">constant_</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Provided weight initialization &quot;</span><span class="si">{}</span><span class="s1">&quot; is not &#39;</span>
+                             <span class="s1">&#39;supported.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">initialization</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_bias</span><span class="p">:</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">constant_</span><span class="p">(</span><span class="n">bias</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`weights`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">bias</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`bias`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">activations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`activations` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span>
+
+    <span class="nd">@activations</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setter for the attribute activations&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">forward_activation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Getter for read-only attribute :attr:`forward_activation`&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_activation</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">use_bias</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Getter for read-only attribute :attr:`use_bias`&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_bias</span>
+
+<div class="viewcode-block" id="LayerInterface.forward_activation_function"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.forward_activation_function">[docs]</a>    <span class="k">def</span> <span class="nf">forward_activation_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute element-wise forward activation based on activation function.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): The input.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor): The post-linearity activation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span> <span class="ow">in</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span><span class="p">][</span><span class="s1">&#39;fn&#39;</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The provided forward activation </span><span class="si">{}</span><span class="s1"> is not &#39;</span>
+                             <span class="s1">&#39;supported&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="LayerInterface.compute_vectorized_jacobian"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.compute_vectorized_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">compute_vectorized_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the vectorized Jacobian of the forward activation function.</span>
+
+<span class="sd">        Compute vectorized Jacobian evaluated at the value `x`. The vectorized</span>
+<span class="sd">        Jacobian is the vector with the diagonal elements of the real Jacobian</span>
+<span class="sd">        as it is a diagonal matrix for element-wise functions. As `x` is a</span>
+<span class="sd">        minibatch, the output will also be a mini-batch of vectorized Jacobia</span>
+<span class="sd">        (thus a matrix).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): The linear activations for the current mini-batch.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor): The Jacobian.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span> <span class="ow">in</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span><span class="p">][</span><span class="s1">&#39;grad&#39;</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The provided forward activation </span><span class="si">{}</span><span class="s1"> is not &#39;</span>
+                             <span class="s1">&#39;supported&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="LayerInterface.requires_grad"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.requires_grad">[docs]</a>    <span class="k">def</span> <span class="nf">requires_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set `require_grad` attribute of the activations to `True`.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="LayerInterface.forward"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the output of the layer.</span>
+
+<span class="sd">        This method applies first a linear mapping with the parameters</span>
+<span class="sd">        ``weights`` and ``bias``, after which it applies the forward activation</span>
+<span class="sd">        function.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): Mini-batch of size `[B, in_features]` with input</span>
+<span class="sd">                activations from the previous layer or input.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The mini-batch of output activations of the layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Code without overwriting autograd&#39;s functions:</span>
+        <span class="c1"># a = x.mm(self.weights.t())</span>
+        <span class="c1"># if self.bias is not None:</span>
+        <span class="c1">#     a += self.bias.unsqueeze(0).expand_as(a)</span>
+        <span class="c1"># self.activations = self.forward_activation_function(a)</span>
+
+        <span class="c1">### Compute overwriting autograd&#39;s functions:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activations</span> <span class="o">=</span> <span class="n">non_linear_function</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="p">,</span>
+                                <span class="n">nonlinearity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_activation</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">activations</span></div>
+
+    <span class="k">def</span> <span class="nf">compute_bp_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the error backpropagation update for the forward parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            loss (float): The network loss.</span>
+<span class="sd">            retain_graph (bool): Whether the graph of the network should be</span>
+<span class="sd">                retained after computing the gradients or jacobians. If the</span>
+<span class="sd">                graph will not be used anymore for the current minibatch</span>
+<span class="sd">                afterwards, `retain_graph` should be `False`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor): The gradients.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">grads</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_forward_parameters</span><span class="p">,</span>
+                                    <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">)</span>
+        <span class="c1"># else: DELETEME</span>
+        <span class="c1">#     grads = torch.autograd.grad(loss, self.weights,</span>
+        <span class="c1">#                                 retain_graph=retain_graph)</span>
+
+        <span class="k">return</span> <span class="n">grads</span>
+
+<div class="viewcode-block" id="LayerInterface.compute_bp_activation_updates"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.compute_bp_activation_updates">[docs]</a>    <span class="k">def</span> <span class="nf">compute_bp_activation_updates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                      <span class="n">linear</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the error backpropagation teaching signal for activations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            (....): See docstring of method :meth:`compute_bp_update`.</span>
+<span class="sd">            linear (bool): Flag indicating whether the update should be</span>
+<span class="sd">                computed for the linear activations instead of the nonlinear</span>
+<span class="sd">                activations.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor): A tensor containing the BP updates for the layer</span>
+<span class="sd">                activations for the current mini-batch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">linear</span><span class="p">:</span>
+            <span class="n">activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linearactivations</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activations</span>
+        <span class="n">grads</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">activations</span><span class="p">,</span>
+                                    <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">grads</span></div>
+
+<div class="viewcode-block" id="LayerInterface.compute_nullspace_relative_norm"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.compute_nullspace_relative_norm">[docs]</a>    <span class="k">def</span> <span class="nf">compute_nullspace_relative_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_activation</span><span class="p">,</span>
+                                        <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the norm of the components of the weight gradients that are</span>
+<span class="sd">        in the nullspace of the jacobian of the output with respect to weights,</span>
+<span class="sd">        relative to the norm of the weight gradients.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_activation (torch.Tensor): The outputs of the layer.</span>
+<span class="sd">            (....): See docstring of method :meth:`compute_bp_update`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor): The relative norm.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">output_activation</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">math_utils</span><span class="o">.</span><span class="n">compute_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">output_activation</span><span class="p">,</span>
+                                        <span class="n">structured_tensor</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                        <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">)</span>
+        <span class="n">weights_update_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">relative_norm</span> <span class="o">=</span> <span class="n">math_utils</span><span class="o">.</span><span class="n">nullspace_relative_norm</span><span class="p">(</span><span class="n">J</span><span class="p">,</span>
+                                                           <span class="n">weights_update_flat</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">relative_norm</span></div>
+
+<div class="viewcode-block" id="LayerInterface.save_logs"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.save_logs">[docs]</a>    <span class="k">def</span> <span class="nf">save_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save logs and plots of this layer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            writer (SummaryWriter): Summary writer.</span>
+<span class="sd">            step (int): The global step used for the x-axis of the plots.</span>
+<span class="sd">            name (str): The name of the layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Save norm and gradient of the weights.</span>
+        <span class="n">forward_weights_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/forward_weights_norm&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                          <span class="n">scalar_value</span><span class="o">=</span><span class="n">forward_weights_norm</span><span class="p">,</span>
+                          <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">forward_weights_gradients_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">grad</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/forward_weights_gradients_norm&#39;</span><span class="o">.</span>\
+                                <span class="nb">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                              <span class="n">scalar_value</span><span class="o">=</span><span class="n">forward_weights_gradients_norm</span><span class="p">,</span>
+                              <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># Save norm and gradient of the biases.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">forward_bias_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/forward_bias_norm&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                              <span class="n">scalar_value</span><span class="o">=</span><span class="n">forward_bias_norm</span><span class="p">,</span>
+                              <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">forward_bias_gradients_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">grad</span><span class="p">)</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/forward_bias_gradients_norm&#39;</span><span class="o">.</span>\
+                                    <span class="nb">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                                  <span class="n">scalar_value</span><span class="o">=</span><span class="n">forward_bias_gradients_norm</span><span class="p">,</span>
+                                  <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LayerInterface.get_forward_parameters"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.get_forward_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_forward_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list containing the forward parameters.</span>
+
+<span class="sd">        In previous versions this was also called `get_forward_parameter_list`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_bias (boolean): Whether the bias should be returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (list): A list with the parameters. It has length of one if only</span>
+<span class="sd">                weights are returned, and length two if biases are returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">with_bias</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="LayerInterface.get_forward_gradients"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.get_forward_gradients">[docs]</a>    <span class="k">def</span> <span class="nf">get_forward_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list containing the gradients of the forward parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            with_bias (boolean): Whether the bias should be returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (list): A list with the gradients. It has length of one if only</span>
+<span class="sd">                weights are returned, and length two if biases are returned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">with_bias</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">grad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">grad</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">grad</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="LayerInterface.compute_bp_update"><a class="viewcode-back" href="../../networks.html#networks.layer_interface.LayerInterface.compute_bp_update">[docs]</a>    <span class="k">def</span> <span class="nf">compute_bp_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the error backpropagation update for the forward</span>
+<span class="sd">        parameters of this layer, based on the given loss.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            loss (float): The loss.</span>
+<span class="sd">            retain_graph (bool): flag indicating whether the graph of the</span>
+<span class="sd">                network should be retained after computing the gradients or</span>
+<span class="sd">                jacobians. If the graph will not be used anymore for the current</span>
+<span class="sd">                minibatch afterwards, `retain_graph` should be `False`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_bias</span><span class="p">:</span>
+            <span class="n">grads</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="p">],</span>
+                                        <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">grads</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span>
+                                        <span class="n">retain_graph</span><span class="o">=</span><span class="n">retain_graph</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">grads</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

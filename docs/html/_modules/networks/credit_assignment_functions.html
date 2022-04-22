@@ -1,0 +1,425 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>networks.credit_assignment_functions &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for networks.credit_assignment_functions</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2019 Christian Henning</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.#</span>
+<span class="c1"># @title          :networks/credit_assignment_functions.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Adding custom functions to PyTorch&#39;s autograd</span>
+<span class="sd">---------------------------------------------</span>
+
+<span class="sd">The module :mod:`lib.backprop_functions` contains custom implementations of</span>
+<span class="sd">neural network components (layers, activation functions, loss functions, ...),</span>
+<span class="sd">that are compatible with PyTorch its autograd_ package.</span>
+
+<span class="sd">A new functionality can be added to autograd_ by creating a subclass of class</span>
+<span class="sd">:class:`torch.autograd.Function`. In particular, we have to implement the</span>
+<span class="sd">:meth:`torch.autograd.Function.forward` method (which computes the output of a</span>
+<span class="sd">differentiable function) and the :meth:`torch.autograd.Function.backward`</span>
+<span class="sd">method (which computes the partial derivatives of the output of the implemented</span>
+<span class="sd">:meth:`torch.autograd.Function.forward` method with respect to all input tensors</span>
+<span class="sd">that are flagged to require gradients).</span>
+
+<span class="sd">.. _autograd:</span>
+<span class="sd">    https://pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
+
+<span class="kn">import</span> <span class="nn">utils.math_utils</span> <span class="k">as</span> <span class="nn">mutils</span>
+
+<div class="viewcode-block" id="NonlinearFunction"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.NonlinearFunction">[docs]</a><span class="k">class</span> <span class="nc">NonlinearFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a fully-connected layer with activation function.</span>
+
+<span class="sd">    This class is a ``Function`` that behaves similar to PyTorch&#39;s class</span>
+<span class="sd">    :class:`torch.nn.Linear`, but it has a different backward function that</span>
+<span class="sd">    includes the non-linearity already. Sincethis class implements the interface</span>
+<span class="sd">    :class:`torch.autograd.Function`, we can use it to specify a custom</span>
+<span class="sd">    backpropagation behavior.</span>
+
+<span class="sd">    Assuming column vectors: layer input :math:`\mathbf{a} \in \mathbb{R}^M`,</span>
+<span class="sd">    bias vector :math:`\mathbf{b} \in \mathbb{R}^N` and a weight matrix</span>
+<span class="sd">    :math:`W \in \mathbb{R}^{N \times M}`, this layer simply computes</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-single-sample</span>
+
+<span class="sd">        \mathbf{z} = \sigma(W \mathbf{a} + \mathbf{b})</span>
+
+<span class="sd">    (or :math:`\mathbf{z} = \sigma W \mathbf{a})` if :math:`\mathbf{b}` is</span>
+<span class="sd">    ``None``), where :math:`\sigma` is the nonlinearity..</span>
+
+<span class="sd">    The mathematical operation described for single samples in eq.</span>
+<span class="sd">    :eq:`eq-single-sample`, is stated for the case of mini-batches below</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        :label: eq-mini-batch</span>
+
+<span class="sd">        Z = \sigma (A W^T + \tilde{B})</span>
+
+<span class="sd">    where :math:`Z \in \mathbb{R}^{B \times N}` is the output matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="NonlinearFunction.forward"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.NonlinearFunction.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the output of a non-linear layer.</span>
+
+<span class="sd">        This method implements eq. :eq:`eq-mini-batch`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: A context. Should be used to store activations which are needed</span>
+<span class="sd">                in the backward pass.</span>
+<span class="sd">            A: A mini-batch of input activations :math:`A`.</span>
+<span class="sd">            W: The weight matrix :math:`W`.</span>
+<span class="sd">            nonlinearity (str): The name of the nonlinearity to be used.</span>
+<span class="sd">            b (optional): The bias vector :math:`\mathbf{b}`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output activations :math:`Z` as defined by eq.</span>
+<span class="sd">            :eq:`eq-mini-batch`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Solution inspired by:</span>
+        <span class="c1"># https://pytorch.org/docs/master/notes/extending.html</span>
+        <span class="c1">### Compute linear part.</span>
+        <span class="n">Z_pre</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Z_pre</span> <span class="o">+=</span> <span class="n">b</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand_as</span><span class="p">(</span><span class="n">Z_pre</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Z_pre</span><span class="p">)</span> <span class="c1"># save pre-nonlinearity activation</span>
+
+        <span class="c1">### Compute non-linearity.</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">nonlinearity</span><span class="p">][</span><span class="s1">&#39;fn&#39;</span><span class="p">](</span><span class="n">Z_pre</span><span class="p">)</span>
+        <span class="c1"># We need to store which nonlinearity we used, such that we can compute</span>
+        <span class="c1"># the derivative in the backward pass. However, only constants can be</span>
+        <span class="c1"># stored in the context, so we store the nonlinearity id.</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">nonlinearity</span><span class="p">][</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">Z</span></div>
+
+<div class="viewcode-block" id="NonlinearFunction.backward"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.NonlinearFunction.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_Z</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Backpropagate the gradients of :math:`Z` through this layer.</span>
+
+<span class="sd">        The matrix ``grad_Z``, which we denote by</span>
+<span class="sd">        :math:`\delta_Z \in \mathbb{R}^{B \times N}`, contains the partial</span>
+<span class="sd">        derivatives of the scalar loss function with respect to each element</span>
+<span class="sd">        from the :meth:`forward` output matrix :math:`Z`.</span>
+
+<span class="sd">        This method backpropagates the global error (encoded in</span>
+<span class="sd">        :math:`\delta_Z`) to all input tensors of the :meth:`forward` method,</span>
+<span class="sd">        essentially computing :math:`\delta_A`, :math:`\delta_W`,</span>
+<span class="sd">        :math:`\delta_\mathbf{b}`.</span>
+
+<span class="sd">        For the linear component, these partial derivatives can be computed as</span>
+<span class="sd">        follows:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_A &amp;= \delta_Z W \\</span>
+<span class="sd">            \delta_W &amp;= \delta_Z^T A \\</span>
+<span class="sd">            \delta_\mathbf{b} &amp;= \sum_{b=1}^B \delta_{Z_{b,:}}</span>
+
+<span class="sd">        where :math:`\delta_{Z_{b,:}}` denotes the vector retrieved from the</span>
+<span class="sd">        :math:`b`-th row of :math:`\delta_Z`.</span>
+
+<span class="sd">        These need to be multiplied by the derivative of the post-nonlinearity</span>
+<span class="sd">        with respect to its input.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method :meth:`forward`.</span>
+<span class="sd">            grad_Z: The backpropagated error :math:`\delta_Z`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (tuple): Tuple containing:</span>
+
+<span class="sd">            - **grad_A**: The derivative of the loss with respect to the input</span>
+<span class="sd">              activations, i.e., :math:`\delta_A`.</span>
+<span class="sd">            - **grad_W**: The derivative of the loss with respect to the weight</span>
+<span class="sd">              matrix, i.e., :math:`\delta_W`.</span>
+<span class="sd">            - **grad_nonlinearity**: Which is always `None`.</span>
+<span class="sd">            - **grad_b**: The derivative of the loss with respect to the bias</span>
+<span class="sd">              vector, i.e., :math:`\delta_\mathbf{b}`; or ``None`` if ``b`` was</span>
+<span class="sd">              passed as ``None`` to the :meth:`forward` method.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Gradients for input tensors are only computed if their keyword</span>
+<span class="sd">                ``requires_grad`` is set to ``True``, otherwise ``None`` is</span>
+<span class="sd">                returned for the corresponding Tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Z_pre</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_A</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_W</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_b</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># Compute the gradient of the output w.r.t. pre-nonlinearity activations</span>
+        <span class="n">grad_nonlinearity_fn</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">get_activation_from_id</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+                                                             <span class="n">grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">grad_Z_pre</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">grad_Z</span><span class="p">,</span> <span class="n">grad_nonlinearity_fn</span><span class="p">(</span><span class="n">Z_pre</span><span class="p">))</span>
+
+        <span class="c1"># We only need to compute gradients for tensors that are flagged to</span>
+        <span class="c1"># require gradients!</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">grad_A</span> <span class="o">=</span> <span class="n">grad_Z_pre</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">W</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">grad_W</span> <span class="o">=</span> <span class="n">grad_Z_pre</span><span class="o">.</span><span class="n">t</span><span class="p">()</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="c1"># We need to look at the third position in the inputs because we also</span>
+        <span class="c1"># provide the nonlinearity name to the forward method in second</span>
+        <span class="c1"># position.</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">3</span><span class="p">]:</span>
+            <span class="n">grad_b</span> <span class="o">=</span> <span class="n">grad_Z_pre</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">grad_A</span><span class="p">,</span> <span class="n">grad_W</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">grad_b</span></div></div>
+
+
+<div class="viewcode-block" id="non_linear_function"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.non_linear_function">[docs]</a><span class="k">def</span> <span class="nf">non_linear_function</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An alias for using class :class:`NonlinearFunction`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of method :meth:`NonlinearFunction.forward`.</span>
+<span class="sd">        nonlinearity (str): The nonlinearity to be used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note, `apply()` doesn&#39;t allow keyword arguments, which is why we build</span>
+    <span class="c1"># this wrapper.</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">NonlinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">NonlinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DFANonlinearFunction"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.DFANonlinearFunction">[docs]</a><span class="k">class</span> <span class="nc">DFANonlinearFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Implementation of a fully-connected layer with activation function.</span>
+
+<span class="sd">    This class is very similar to ``NonlinearFunction`` but it provides layers</span>
+<span class="sd">    to be used with Direct Feedback Alignment, i.e. it projects gradients of</span>
+<span class="sd">    the last layer directly to all upstream layers, while keeping the forward</span>
+<span class="sd">    pass unchanged.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DFANonlinearFunction.forward"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.DFANonlinearFunction.forward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">is_last_layer</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Compute the output of a non-linear layer.</span>
+
+<span class="sd">        Same as in `NonlinearFunction.forward` except that here we also store</span>
+<span class="sd">        in the context the direct feedback matrix.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            (....): See docstring of method :meth:`NonlinearFunction.forward`.</span>
+<span class="sd">            B (torch.Tensor): The feedback connection matrices.</span>
+<span class="sd">            grad_out (torch.Tensor): The gradient of the loss with respect to</span>
+<span class="sd">                the last layer activation. Required to be directly projected</span>
+<span class="sd">                to all upstream layers.</span>
+<span class="sd">            is_last_layer (boolean): Whether this is the last layer of the net.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (....): See docstring of method :meth:`NonlinearFunction.forward`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Solution inspired by:</span>
+        <span class="c1"># https://pytorch.org/docs/master/notes/extending.html</span>
+        <span class="c1">### Compute linear part.</span>
+        <span class="n">Z_pre</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Z_pre</span> <span class="o">+=</span> <span class="n">b</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand_as</span><span class="p">(</span><span class="n">Z_pre</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Z_pre</span><span class="p">)</span>
+
+        <span class="c1">### Compute non-linearity.</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">nonlinearity</span><span class="p">][</span><span class="s1">&#39;fn&#39;</span><span class="p">](</span><span class="n">Z_pre</span><span class="p">)</span>
+
+        <span class="c1"># We need to store which nonlinearity we used, such that we can compute</span>
+        <span class="c1"># the derivative in the backward pass. However, only constants can be</span>
+        <span class="c1"># stored in the context, so we store the nonlinearity id.</span>
+        <span class="c1"># Note that the last layer is always linear.</span>
+        <span class="k">if</span> <span class="n">is_last_layer</span><span class="p">:</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">ACTIVATION_FUNCTIONS</span><span class="p">[</span><span class="n">nonlinearity</span><span class="p">][</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">Z</span></div>
+
+<div class="viewcode-block" id="DFANonlinearFunction.backward"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.DFANonlinearFunction.backward">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_Z</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Directly project the output gradients to this layer.</span>
+
+<span class="sd">        The matrix ``grad_Z``, which we denote by</span>
+<span class="sd">        :math:`\delta_Z \in \mathbb{R}^{B \times N}`, contains the partial</span>
+<span class="sd">        derivatives of the scalar loss function with respect to each element</span>
+<span class="sd">        from the :meth:`forward` output matrix :math:`Z`. It is ignored for all</span>
+<span class="sd">        layers, except for the last layer.</span>
+
+<span class="sd">        For the linear component, the partial derivatives of the weights can be</span>
+<span class="sd">        computed as follows:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \delta_W &amp;= B \delta_{Z_N}^T A \\</span>
+
+<span class="sd">        Where :math:`B` is the feedback matrix that allows projecting from the</span>
+<span class="sd">        output layer, and :math:`\delta_{Z_N}` is the gradient of the loss in</span>
+<span class="sd">        the last layer.</span>
+
+<span class="sd">        These need to be multiplied by the derivative of the post-nonlinearity</span>
+<span class="sd">        with respect to its input.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ctx: See description of argument ``ctx`` of method :meth:`forward`.</span>
+<span class="sd">            grad_Z: The backpropagated error :math:`\delta_Z`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (....): See docstring of method :meth:`NonlinearFunction.backward`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">Z_pre</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
+
+        <span class="n">grad_A</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># We don&#39;t care about this gradient anymore.</span>
+        <span class="n">grad_W</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">grad_b</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Determine from the constant whether this is the last layer.</span>
+        <span class="n">is_last_layer</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">constant</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">is_last_layer</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># overwrite with id of linear activation</span>
+
+        <span class="c1"># The last layer behaves pretty much like in normal backprop whereas</span>
+        <span class="c1"># the rest needs to ignore the provided gradient and use that of the</span>
+        <span class="c1"># final layer.</span>
+        <span class="k">if</span> <span class="n">is_last_layer</span><span class="p">:</span>
+            <span class="c1"># Overwrite the referenced output gradient for later use in</span>
+            <span class="c1"># upstream layers. It needs to be an in-place operation.</span>
+            <span class="n">grad_out</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">grad_Z</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">grad_Z</span> <span class="o">=</span> <span class="n">grad_out</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+
+        <span class="c1"># Compute the gradient of the output w.r.t. pre-nonlinearity activations</span>
+        <span class="n">grad_nonlinearity_fn</span> <span class="o">=</span> <span class="n">mutils</span><span class="o">.</span><span class="n">get_activation_from_id</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">constant</span><span class="p">,</span>
+                                                             <span class="n">grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">grad_nonlinearity</span> <span class="o">=</span> <span class="n">grad_nonlinearity_fn</span><span class="p">(</span><span class="n">Z_pre</span><span class="p">)</span>
+        <span class="n">grad_Z_pre</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">grad_Z</span><span class="p">,</span> <span class="n">grad_nonlinearity</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">grad_W</span> <span class="o">=</span> <span class="n">grad_Z</span><span class="o">.</span><span class="n">t</span><span class="p">()</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">needs_input_grad</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">grad_b</span> <span class="o">=</span> <span class="n">grad_Z</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">grad_A</span><span class="p">,</span> <span class="n">grad_W</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">grad_b</span></div></div>
+
+<div class="viewcode-block" id="non_linear_dfa_function"><a class="viewcode-back" href="../../networks.html#networks.credit_assignment_functions.non_linear_dfa_function">[docs]</a><span class="k">def</span> <span class="nf">non_linear_dfa_function</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">is_last_layer</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An alias for using class :class:`DFANonlinearFunction`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of method :meth:`NonlinearFunction.forward`.</span>
+<span class="sd">        grad_out (torch.Tensor): The loss gradient of the last layer.</span>
+<span class="sd">        is_last_layer (boolean): Whether this is the last layer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note, `apply()` doesn&#39;t allow keyword arguments, which is why we build</span>
+    <span class="c1"># this wrapper.</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DFANonlinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span>
+                                          <span class="n">is_last_layer</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DFANonlinearFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">grad_out</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span>
+                                          <span class="n">is_last_layer</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

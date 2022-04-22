@@ -1,0 +1,458 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>networks.dfc_layer &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for networks.dfc_layer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :networks/dfc_layer.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implementation of a layer for Deep Feedback Control</span>
+<span class="sd">---------------------------------------------------</span>
+
+<span class="sd">A layer that is prepared to be trained with DFC.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+<span class="kn">from</span> <span class="nn">networks.layer_interface</span> <span class="k">import</span> <span class="n">LayerInterface</span>
+
+<div class="viewcode-block" id="DFCLayer"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer">[docs]</a><span class="k">class</span> <span class="nc">DFCLayer</span><span class="p">(</span><span class="n">LayerInterface</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implementation of a Deep Feedback Control layer.</span>
+
+<span class="sd">    It contains the following important functions:</span>
+
+<span class="sd">    * forward: which computes the linear activation based on the previous layer</span>
+<span class="sd">      as well as the post non-linearity activation. It stores these in the</span>
+<span class="sd">      attributes &quot;_linear_activations&quot; and &quot;_activa.tions&quot;.</span>
+<span class="sd">    * compute_forward_gradients: computes the forward parameter updates and</span>
+<span class="sd">      stores them under &quot;grad&quot;, by using the pre-synaptic activations and the</span>
+<span class="sd">      controller feedback. The ule is based on a voltage difference rule.</span>
+<span class="sd">    * compute_forward_gradients_continuous: same as &quot;compute_forward_gradients&quot;</span>
+<span class="sd">      but it performs an integration over time.</span>
+<span class="sd">    * compute_feedback_gradients: compute the feedback gradients.</span>
+<span class="sd">    * compute_feedback_gradients_continuous: same as</span>
+<span class="sd">      &quot;compute_feedback_gradients&quot; but it performs an integration over time.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of class :class:`layer_interface.LayerInterface`.</span>
+<span class="sd">        last_layer_features (int): The size of the output layer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">last_layer_features</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">forward_activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">,</span>
+                 <span class="n">initialization</span><span class="o">=</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">,</span>
+                 <span class="n">initialization_fb</span><span class="o">=</span><span class="s1">&#39;weight_product&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">,</span>
+                         <span class="n">requires_grad</span><span class="o">=</span><span class="n">requires_grad</span><span class="p">,</span>
+                         <span class="n">forward_activation</span><span class="o">=</span><span class="n">forward_activation</span><span class="p">,</span>
+                         <span class="n">initialization</span><span class="o">=</span><span class="n">initialization</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">initialization_fb</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">initialization_fb</span> <span class="o">=</span> <span class="n">initialization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialization_fb</span> <span class="o">=</span> <span class="n">initialization_fb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_features</span> <span class="o">=</span> <span class="n">last_layer_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_linear_activations</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Create and initialize feedback weights.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_direct_feedback_layer</span><span class="p">(</span><span class="n">last_layer_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">)</span>
+
+        <span class="c1"># The &quot;weight_product&quot; initialization is applied at the network level,</span>
+        <span class="c1"># since it requires knowledge of all weight matrices. So here, we</span>
+        <span class="c1"># initialize them equal to the feedfoward weights and then it will get</span>
+        <span class="c1"># overwritten.</span>
+        <span class="k">if</span> <span class="n">initialization_fb</span><span class="o">==</span><span class="s1">&#39;weight_product&#39;</span><span class="p">:</span>
+            <span class="n">initialization_fb</span> <span class="o">=</span> <span class="n">initialization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_layer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span><span class="p">,</span>
+                        <span class="n">initialization</span><span class="o">=</span><span class="n">initialization_fb</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">weights_backward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`_weights_backward`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span>
+
+    <span class="nd">@weights_backward</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">weights_backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Setter for feedback weights.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tensor (torch.Tensor): The tensor of values to set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span> <span class="o">=</span> <span class="n">tensor</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">activations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`activations` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span>
+
+    <span class="nd">@activations</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setter for the attribute activations&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activations</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">linear_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Getter for read-only attribute :attr:`linear_activations` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linear_activations</span>
+
+    <span class="nd">@linear_activations</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">linear_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Setter for the attribute :attr:`linear_activations` &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_linear_activations</span> <span class="o">=</span> <span class="n">value</span>
+
+<div class="viewcode-block" id="DFCLayer.set_direct_feedback_layer"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.set_direct_feedback_layer">[docs]</a>    <span class="k">def</span> <span class="nf">set_direct_feedback_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">last_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create the network backward parameters.</span>
+
+<span class="sd">        This layer connects the output layer to a hidden layer. No biases are</span>
+<span class="sd">        used in direct feedback layers. These backward parameters have no</span>
+<span class="sd">        gradient as they are fixed.</span>
+
+<span class="sd">        Note that as opposed to DFA, here the backwards weights are not</span>
+<span class="sd">        Parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            (....): See docstring of method</span>
+<span class="sd">                :meth:`layer_interface.LayerInterface.set_layer`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">out_features</span><span class="p">,</span> <span class="n">last_features</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="DFCLayer.forward"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the output of the layer.</span>
+
+<span class="sd">        This method applies first a linear mapping with the parameters</span>
+<span class="sd">        ``weights`` and ``bias``, after which it applies the forward activation</span>
+<span class="sd">        function.</span>
+
+<span class="sd">        In the forward pass there is no noise, and thus the normal activations</span>
+<span class="sd">        and the low-pass filtered activations are identical.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): Mini-batch of size `[B, in_features]` with input</span>
+<span class="sd">                activations from the previous layer or input.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The mini-batch of output activations of the layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand_as</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_activations</span> <span class="o">=</span> <span class="n">a</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_activations_lp</span> <span class="o">=</span> <span class="n">a</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activations_lp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">activations</span></div>
+
+<div class="viewcode-block" id="DFCLayer.compute_forward_gradients"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.compute_forward_gradients">[docs]</a>    <span class="k">def</span> <span class="nf">compute_forward_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta_v</span><span class="p">,</span> <span class="n">r_previous</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                                  <span class="n">saving_ndi_updates</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                  <span class="n">learning_rule</span><span class="o">=</span><span class="s1">&#39;nonlinear_difference&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes forward gradients using a local-in-time learning rule.</span>
+
+<span class="sd">        This function applies a non-linear difference learning rule as described</span>
+<span class="sd">        in Eq. (5) in the paper. Specifically, it compues the difference between</span>
+<span class="sd">        the non-linear transformation of basal and somatic voltages.</span>
+
+<span class="sd">        Depending on the option ``saving_ndi_updates`` these updates will be</span>
+<span class="sd">        stored in different locations (see argument docstring).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            delta_v: The feedback teaching signal from the controller.</span>
+<span class="sd">            r_previous (torch.Tensor): The activations of the previous layer.</span>
+<span class="sd">            scale (float): Scaling factor for the gradients.</span>
+<span class="sd">            saving_ndi_updates (boolean): Whether to save the non-dynamical</span>
+<span class="sd">                inversion updates. When ``True``, computed updates are added to</span>
+<span class="sd">                ``ndi_updates_weights`` (and bias) to later compare with the</span>
+<span class="sd">                steady-state/continuous updates. When ``False``, computed</span>
+<span class="sd">                updates are added to ``weights.grad`` (and bias), to be later</span>
+<span class="sd">                updated.</span>
+<span class="sd">            learning_rule (str): The type of learning rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">r_previous</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">learning_rule</span> <span class="o">==</span> <span class="s2">&quot;voltage_difference&quot;</span><span class="p">:</span>
+            <span class="n">teaching_signal</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">delta_v</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">learning_rule</span> <span class="o">==</span> <span class="s2">&quot;nonlinear_difference&quot;</span><span class="p">:</span>
+            <span class="c1"># Compute feedforward activations in basal and somatic compartments.</span>
+            <span class="n">v_ff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">r_previous</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">v_ff</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand_as</span><span class="p">(</span><span class="n">v_ff</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">delta_v</span> <span class="o">+</span> <span class="n">v_ff</span> 
+
+            <span class="c1"># Compute the teaching signal based on the basal-somatic difference.</span>
+            <span class="n">teaching_signal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-</span> \
+                              <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">v_ff</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The rule </span><span class="si">%s</span><span class="s1"> is not valid.&#39;</span> <span class="o">%</span> <span class="n">learning_rule</span><span class="p">)</span>
+
+        <span class="c1"># Compute the gradients and actual updates.</span>
+        <span class="n">weights_grad</span> <span class="o">=</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">1.</span><span class="o">/</span><span class="n">batch_size</span> <span class="o">*</span> <span class="n">teaching_signal</span><span class="o">.</span><span class="n">t</span><span class="p">()</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">r_previous</span><span class="p">)</span>
+        <span class="n">weight_update</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">weights_grad</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bias_grad</span> <span class="o">=</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">teaching_signal</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">bias_update</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">bias_grad</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+
+        <span class="c1"># Store the updates appropriately.</span>
+        <span class="k">if</span> <span class="n">saving_ndi_updates</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ndi_updates_weights</span> <span class="o">=</span> <span class="n">weight_update</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ndi_updates_bias</span> <span class="o">=</span> <span class="n">bias_update</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="o">.</span><span class="n">grad</span> <span class="o">+=</span> <span class="n">weight_update</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="o">.</span><span class="n">grad</span> <span class="o">+=</span> <span class="n">bias_update</span></div>
+
+<div class="viewcode-block" id="DFCLayer.compute_forward_gradients_continuous"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.compute_forward_gradients_continuous">[docs]</a>    <span class="k">def</span> <span class="nf">compute_forward_gradients_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_time</span><span class="p">,</span> <span class="n">v_ff_time</span><span class="p">,</span>
+                                     <span class="n">r_previous_time</span><span class="p">,</span> <span class="n">t_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                                     <span class="n">learning_rule</span><span class="o">=</span><span class="s1">&#39;nonlinear_difference&#39;</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes forward gradients using an integration (sum) of voltage</span>
+<span class="sd">        differences across comparments.</span>
+
+<span class="sd">        This weight update is identical to ``compute_forward_gradients``</span>
+<span class="sd">        except that it allows to integrate over more than one timestep.</span>
+<span class="sd">        However, here the somatic and basal voltages are assumed to have been</span>
+<span class="sd">        computed outside and provided as an input argument.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            v_time: The somatic voltages at different timesteps.</span>
+<span class="sd">            v_ff_time: The basal voltages at different timesteps.</span>
+<span class="sd">            r_previous_time: The activations of the previous layer at different</span>
+<span class="sd">                timesteps.</span>
+<span class="sd">            t_start (int): The initial time index for the integration.</span>
+<span class="sd">            t_end (int): The final time index for the integration.</span>
+<span class="sd">            learning_rule (str): The type of learning rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">r_previous_time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Get the boundaries accross which to compute the summation.</span>
+        <span class="k">if</span> <span class="n">t_start</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="n">t_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">t_end</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">t_end</span> <span class="o">=</span> <span class="n">v_time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">t_end</span> <span class="o">-</span> <span class="n">t_start</span>
+
+        <span class="k">if</span> <span class="n">learning_rule</span> <span class="o">==</span> <span class="s2">&quot;voltage_difference&quot;</span><span class="p">:</span>
+            <span class="c1"># Compute the teaching signal based on the voltage difference.</span>
+            <span class="n">teaching_signal</span> <span class="o">=</span> <span class="n">v_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">]</span> <span class="o">-</span> <span class="n">v_ff_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">learning_rule</span> <span class="o">==</span> <span class="s2">&quot;nonlinear_difference&quot;</span><span class="p">:</span>
+            <span class="c1"># Compute the teaching signal based on the basal-somatic difference.</span>
+            <span class="n">teaching_signal</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">v_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">])</span> <span class="o">-</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">forward_activation_function</span><span class="p">(</span><span class="n">v_ff_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The rule </span><span class="si">%s</span><span class="s1"> is not valid.&#39;</span> <span class="o">%</span> <span class="n">learning_rule</span><span class="p">)</span>
+
+        <span class="c1"># Compute the gradients.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bias_grad</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">T</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">teaching_signal</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">teaching_signal</span> <span class="o">=</span> <span class="n">teaching_signal</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">weights_grad</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">T</span> <span class="o">*</span> \
+                    <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">teaching_signal</span> <span class="o">@</span> \
+                              <span class="n">r_previous_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Store the updates appropriately.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="o">.</span><span class="n">grad</span> <span class="o">=</span> <span class="n">bias_grad</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="o">.</span><span class="n">grad</span> <span class="o">=</span> <span class="n">weights_grad</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DFCLayer.compute_feedback_gradients_continuous"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.compute_feedback_gradients_continuous">[docs]</a>    <span class="k">def</span> <span class="nf">compute_feedback_gradients_continuous</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_fb_time</span><span class="p">,</span> <span class="n">u_time</span><span class="p">,</span>
+                                              <span class="n">t_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                              <span class="n">sigma</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes feedback gradients using an integration (sum) of voltage.</span>
+
+<span class="sd">        This weight update is identical to :meth:`compute_feedback_gradients`</span>
+<span class="sd">        except that it allows to integrate over more than one timestep.</span>
+
+<span class="sd">        It follows the differential equation:</span>
+
+<span class="sd">        .. math::</span>
+<span class="sd">            </span>
+<span class="sd">            \frac{dQ_i}{dt} = -\mathbf{v}_i^\text{fb} \mathbf{u}(t)^T - \</span>
+<span class="sd">                \beta Q_i</span>
+
+<span class="sd">        Refer to :meth:`compute_feedback_gradients` for variable details.</span>
+
+<span class="sd">        Note that pytorch saves the positive gradient, hence we should save</span>
+<span class="sd">        :math:`-\Delta Q_i`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            v_fb_time (torch.Tensor): The apical compartment voltages over</span>
+<span class="sd">                a certain time period.</span>
+<span class="sd">            u_time (torch.Tensor): The control inputs over  certain time period.</span>
+<span class="sd">            t_start (torch.Tensor): The start index from which the summation</span>
+<span class="sd">                over time should start.</span>
+<span class="sd">            t_end (torch.Tensor): The stop index at which the summation over</span>
+<span class="sd">                time should stop.</span>
+<span class="sd">            sigma (float): The standard deviation of the noise in the network</span>
+<span class="sd">                dynamics. This is used to scale the fb weight update, such that</span>
+<span class="sd">                its magnitude is independent of the noise variance.</span>
+<span class="sd">            beta (float): The homeostatic weight decay parameter.</span>
+<span class="sd">            scaling (float): In the theory for the feedback weight updates, the</span>
+<span class="sd">                update for each layer should be scaled with</span>
+<span class="sd">                :math:`(1+\tau_{v}/\tau_{\epsilon})^{L-i}`, with L the amount of</span>
+<span class="sd">                layers and i the layer index. ``scaling`` should be the factor</span>
+<span class="sd">                :math:`(1+\tau_{v}/\tau_{\epsilon})^{L-i}` for this layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">v_fb_time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Get the boundaries accross which to compute the summation.</span>
+        <span class="k">if</span> <span class="n">t_start</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="n">t_start</span> <span class="o">=</span> <span class="mi">0</span> 
+        <span class="k">if</span> <span class="n">t_end</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">t_end</span> <span class="o">=</span> <span class="n">v_fb_time</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">t_end</span> <span class="o">-</span> <span class="n">t_start</span>
+
+        <span class="c1"># Compute the gradient scaling.</span>
+        <span class="k">if</span> <span class="n">sigma</span> <span class="o">&lt;</span> <span class="mf">0.01</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">0.01</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">scale</span> <span class="o">*=</span> <span class="n">scaling</span>
+
+        <span class="c1"># Compute the update.</span>
+        <span class="n">feedbackweights_grad</span> <span class="o">=</span> <span class="n">scale</span><span class="o">/</span><span class="p">(</span><span class="n">T</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">)</span> <span class="o">*</span> \
+                <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v_fb_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">]</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> \
+                          <span class="o">@</span> <span class="n">u_time</span><span class="p">[</span><span class="n">t_start</span><span class="p">:</span><span class="n">t_end</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">feedbackweights_grad</span> <span class="o">+=</span> <span class="n">beta</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights_backward</span><span class="o">.</span><span class="n">grad</span> <span class="o">=</span> <span class="n">feedbackweights_grad</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DFCLayer.save_feedback_batch_logs"><a class="viewcode-back" href="../../networks.html#networks.dfc_layer.DFCLayer.save_feedback_batch_logs">[docs]</a>    <span class="k">def</span> <span class="nf">save_feedback_batch_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">no_gradient</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                 <span class="n">pretraining</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save feedback weight stats for the latest mini-batch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            writer (SummaryWriter): Summary writer from tensorboardX.</span>
+<span class="sd">            step (int): The global step used for the x-axis of the plots.</span>
+<span class="sd">            name (str): The name of the layer.</span>
+<span class="sd">            no_gradient (bool): Flag indicating whether we should skip saving</span>
+<span class="sd">                the gradients of the feedback weights.</span>
+<span class="sd">            pretraining (bool): Flag indicating that the training is in the</span>
+<span class="sd">                initialization phase (only training the feedback weights).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">pretraining</span><span class="p">:</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;feedback_training/</span><span class="si">{}</span><span class="s1">/&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
+
+        <span class="n">feedback_weights_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_backward</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="n">prefix</span> <span class="o">+</span> <span class="s1">&#39;feedback_weights_norm&#39;</span><span class="p">,</span>
+                          <span class="n">scalar_value</span><span class="o">=</span><span class="n">feedback_weights_norm</span><span class="p">,</span>
+                          <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_backward</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">feedback_weights_grad_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_backward</span><span class="o">.</span><span class="n">grad</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="n">tag</span><span class="o">=</span><span class="n">prefix</span> <span class="o">+</span> <span class="s1">&#39;feedback_weights_gradient_norm&#39;</span><span class="p">,</span>
+                              <span class="n">scalar_value</span><span class="o">=</span><span class="n">feedback_weights_grad_norm</span><span class="p">,</span>
+                              <span class="n">global_step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;DFCLayer&#39;</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

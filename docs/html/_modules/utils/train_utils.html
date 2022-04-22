@@ -1,0 +1,482 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils.train_utils &#8212; dfc 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for utils.train_utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># Copyright 2021 Alexander Meulemans, Matilde Tristany, Maria Cervera</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#    http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1">#</span>
+<span class="c1"># @title          :utils/train_utils.py</span>
+<span class="c1"># @author         :mc</span>
+<span class="c1"># @contact        :mariacer@ethz.ch</span>
+<span class="c1"># @created        :28/11/2021</span>
+<span class="c1"># @version        :1.0</span>
+<span class="c1"># @python_version :3.7.4</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Helper functions for training and testing networks</span>
+<span class="sd">--------------------------------------------------</span>
+
+<span class="sd">A collection of functions for training and testing networks.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">hypnettorch.utils</span> <span class="k">import</span> <span class="n">torch_ckpts</span> <span class="k">as</span> <span class="n">ckpts</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">networks</span> <span class="k">import</span> <span class="n">dfc_network_utils</span> <span class="k">as</span> <span class="n">dfc</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">math_utils</span> <span class="k">as</span> <span class="n">mutils</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">plt_utils</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="k">import</span> <span class="n">sim_utils</span>
+<span class="kn">from</span> <span class="nn">utils.optimizer_utils</span> <span class="k">import</span> <span class="n">extract_parameters</span>
+
+<div class="viewcode-block" id="train"><a class="viewcode-back" href="../../utils.html#utils.train_utils.train">[docs]</a><span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">optimizers</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span>
+          <span class="n">network_type</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Train the network.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config: The command-line arguments.</span>
+<span class="sd">        logger: The logger.</span>
+<span class="sd">        device: The cuda device.</span>
+<span class="sd">        writer: The tensorboard writer.</span>
+<span class="sd">        dloader: The dataset.</span>
+<span class="sd">        net: The network.</span>
+<span class="sd">        optimizers: The optimizers.</span>
+<span class="sd">        shared: Shared object with task information.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        loss_fn: The loss function.</span>
+
+<span class="sd">    Return:</span>
+<span class="sd">        (dict): The shared object containing summary information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">test</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Option &quot;test&quot; is active. This is a dummy run!&#39;</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Training network ...&#39;</span><span class="p">)</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+    <span class="n">net</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+
+    <span class="c1"># If the error needs to be computed as the gradient of the loss within </span>
+    <span class="c1"># the network, provide the name of the loss function being used.</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;error_as_loss_grad&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">error_as_loss_grad</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">loss_function_name</span> <span class="o">=</span> <span class="s1">&#39;cross_entropy&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loss_function_name</span> <span class="o">=</span> <span class="s1">&#39;mse&#39;</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">loss_function_name</span> <span class="o">=</span> <span class="n">loss_function_name</span>
+
+    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">epochs</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Training epoch </span><span class="si">%i</span><span class="s1">/</span><span class="si">%i</span><span class="s1">...&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">epochs</span><span class="p">))</span>
+        <span class="n">epoch_initial_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1">### Train.</span>
+        <span class="c1"># Feedback training for two-phase DFC.</span>
+        <span class="k">if</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+            <span class="n">dfc</span><span class="o">.</span><span class="n">train_epoch_feedback</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span>
+                                     <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;feedback&#39;</span><span class="p">],</span> <span class="n">net</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span>
+                                     <span class="n">loss_fn</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># Forward training.</span>
+        <span class="n">epoch_losses</span><span class="p">,</span> <span class="n">epoch_accs</span> <span class="o">=</span> <span class="n">train_epoch_forward</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span>
+                                               <span class="n">device</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span>
+                                               <span class="n">net</span><span class="p">,</span> <span class="n">optimizers</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span>
+                                               <span class="n">network_type</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># If required train feedback weights for extra epochs.</span>
+        <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span><span class="p">:</span>
+            <span class="n">dfc</span><span class="o">.</span><span class="n">train_feedback_parameters</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span>
+                                          <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">optimizers</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span>
+                                          <span class="n">loss_fn</span><span class="p">)</span>
+
+        <span class="c1">### Test.</span>
+        <span class="n">epoch_test_loss</span><span class="p">,</span> <span class="n">epoch_test_accu</span> <span class="o">=</span> <span class="n">test</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span>
+                                                <span class="n">shared</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span>
+                                                <span class="n">network_type</span><span class="p">)</span>
+
+        <span class="c1">### Validate.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">no_val_set</span><span class="p">:</span>
+            <span class="n">epoch_val_loss</span><span class="p">,</span> <span class="n">epoch_val_accu</span> <span class="o">=</span> <span class="n">test</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span>
+                                                  <span class="n">writer</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span>
+                                                  <span class="n">loss_fn</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span>
+                                                  <span class="n">data_split</span><span class="o">=</span><span class="s1">&#39;validation&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Keep track of performance results.</span>
+        <span class="n">epoch_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">epoch_initial_time</span><span class="p">)</span>
+        <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_time</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epoch_time</span><span class="p">)</span>
+
+        <span class="c1"># Log some information.</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;     Test loss: </span><span class="si">%.4f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">epoch_test_loss</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;     Test accu: </span><span class="si">%.2f%%</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">epoch_test_accu</span><span class="o">*</span><span class="mi">100</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;     Time </span><span class="si">%i</span><span class="s1"> s&#39;</span> <span class="o">%</span> <span class="n">epoch_time</span><span class="p">)</span>
+
+        <span class="c1"># Write summary information.</span>
+        <span class="n">shared</span> <span class="o">=</span> <span class="n">sim_utils</span><span class="o">.</span><span class="n">update_summary_info</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">network_type</span><span class="p">)</span>
+
+        <span class="c1"># Add results to the writer.</span>
+        <span class="n">sim_utils</span><span class="o">.</span><span class="n">add_summary_to_writer</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">sim_utils</span><span class="o">.</span><span class="n">log_stats_to_writer</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">net</span><span class="p">)</span>
+
+        <span class="c1"># Same the performance summary.</span>
+        <span class="n">sim_utils</span><span class="o">.</span><span class="n">save_summary_dict</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">shared</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">epoch_summary_interval</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> \
+                                        <span class="n">e</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">epoch_summary_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Every few epochs, save separate summary file.</span>
+            <span class="n">sim_utils</span><span class="o">.</span><span class="n">save_summary_dict</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">net</span><span class="o">.</span><span class="n">contains_nans</span><span class="p">():</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Network contains NaNs, terminating training.&#39;</span><span class="p">)</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;finished&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">break</span>
+
+        <span class="c1"># Save the training network.</span>
+        <span class="k">if</span> <span class="n">e</span> <span class="o">%</span> <span class="n">config</span><span class="o">.</span><span class="n">checkpoint_interval</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">save_checkpoints</span><span class="p">:</span>
+            <span class="n">store_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;state_dict&#39;</span><span class="p">:</span> <span class="n">net</span><span class="o">.</span><span class="n">state_dict</span><span class="p">,</span>
+                          <span class="s1">&#39;net_state&#39;</span><span class="p">:</span> <span class="s1">&#39;epoch_</span><span class="si">%i</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="p">,</span>
+                          <span class="s1">&#39;train_loss&#39;</span><span class="p">:</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_loss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                          <span class="s1">&#39;test_loss&#39;</span><span class="p">:</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_loss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]}</span>
+            <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+                <span class="n">store_dict</span><span class="p">[</span><span class="s1">&#39;train_acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_accu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">store_dict</span><span class="p">[</span><span class="s1">&#39;test_acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_accu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">ckpts</span><span class="o">.</span><span class="n">save_checkpoint</span><span class="p">(</span><span class="n">store_dict</span><span class="p">,</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s1">&#39;ckpts/training&#39;</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># Kill the run if results are below desired threshold.</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span> <span class="ow">and</span> <span class="n">e</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">epoch_accs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">min_acc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Simulation killed: low accuracy at epoch </span><span class="si">%i</span><span class="s1">.&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">e</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;finished&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">break</span>
+
+    <span class="c1"># Save the final network.</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_checkpoints</span><span class="p">:</span>
+        <span class="n">store_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;state_dict&#39;</span><span class="p">:</span> <span class="n">net</span><span class="o">.</span><span class="n">state_dict</span><span class="p">,</span>
+                      <span class="s1">&#39;net_state&#39;</span><span class="p">:</span> <span class="s1">&#39;trained&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;train_loss&#39;</span><span class="p">:</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_loss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                      <span class="s1">&#39;test_loss&#39;</span><span class="p">:</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_loss</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]}</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">store_dict</span><span class="p">[</span><span class="s1">&#39;train_acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_accu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">store_dict</span><span class="p">[</span><span class="s1">&#39;test_acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_accu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">ckpts</span><span class="o">.</span><span class="n">save_checkpoint</span><span class="p">(</span><span class="n">store_dict</span><span class="p">,</span>
+                              <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span> <span class="s1">&#39;ckpts/final&#39;</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># Finish up the training.</span>
+    <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;finished&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Only overwrite if the training hasn&#39;t been stopped due to NaNs.</span>
+        <span class="n">shared</span><span class="o">.</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;finished&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Training network ... Done.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">shared</span></div>
+
+<div class="viewcode-block" id="train_epoch_forward"><a class="viewcode-back" href="../../utils.html#utils.train_utils.train_epoch_forward">[docs]</a><span class="k">def</span> <span class="nf">train_epoch_forward</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span>
+                        <span class="n">optimizers</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Train forward weights for one epoch.</span>
+
+<span class="sd">    For backpropagation, remember that forward and feedback parameters are one</span>
+<span class="sd">    and the same, so this function is equivalent to normal training.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config (Namespace): The command-line arguments.</span>
+<span class="sd">        logger: The logger.</span>
+<span class="sd">        device: The PyTorch device to be used.</span>
+<span class="sd">        writer (SummaryWriter): TensorboardX summary writer to save logs.</span>
+<span class="sd">        shared: Shared object with task information.</span>
+<span class="sd">        dloader: The dataset.</span>
+<span class="sd">        net: The neural network.</span>
+<span class="sd">        optimizers (dict): The optimizers.</span>
+<span class="sd">        loss_fn: The loss function to use.</span>
+<span class="sd">        network_type (str): The type of network.</span>
+<span class="sd">        epoch: The current epoch.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (....): Tuple containing:</span>
+
+<span class="sd">        - **epoch_losses**: The list of losses in all batches of the epoch.</span>
+<span class="sd">        - **epoch_accs**: The list of accuracies in all batches of the epoch.</span>
+<span class="sd">            ``None`` for non classification tasks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">epoch_losses</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">epoch_accs</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">single_phase</span> <span class="o">=</span> <span class="n">network_type</span> <span class="o">==</span> <span class="s1">&#39;DFC_single_phase&#39;</span>
+
+    <span class="c1"># Do we need to compute the gradients in this function?</span>
+    <span class="n">compute_gradient</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fw_weights</span>
+    <span class="k">if</span> <span class="n">single_phase</span><span class="p">:</span>
+        <span class="n">compute_gradient</span> <span class="o">=</span> <span class="n">compute_gradient</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">freeze_fb_weights</span>
+
+    <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_lu_loss</span><span class="p">:</span>
+            <span class="n">epoch_loss_lu</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">net</span><span class="o">.</span><span class="n">rel_dist_to_NDI</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dloader</span><span class="o">.</span><span class="n">train</span><span class="p">):</span>
+
+        <span class="c1"># Reset optimizers.</span>
+        <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;forward&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">single_phase</span><span class="p">:</span>
+            <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;feedback&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Make predictions.</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="c1"># Inform the network whether values should be logged (once per epoch)</span>
+        <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">save_ndi_updates</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">net</span><span class="o">.</span><span class="n">save_ndi_updates</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">save_ndi_angle</span>
+
+        <span class="c1">### Compute loss and accuracy.</span>
+        <span class="n">batch_loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+        <span class="n">batch_accuracy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">batch_accuracy</span> <span class="o">=</span> <span class="n">compute_accuracy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+
+        <span class="c1">### Compute gradients and update weights.</span>
+        <span class="k">if</span> <span class="n">compute_gradient</span><span class="p">:</span>
+            <span class="n">net</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">batch_loss</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">extract_parameters</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">):</span>
+                    <span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">single_phase</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">extract_parameters</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">network_type</span><span class="p">,</span>\
+                            <span class="n">params_type</span><span class="o">=</span><span class="s1">&#39;feedback&#39;</span><span class="p">):</span>
+                        <span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">net</span><span class="o">.</span><span class="n">get_max_grad</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_grad_norm</span>
+                
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;use_bp_updates&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">use_bp_updates</span><span class="p">:</span>
+                <span class="n">net</span><span class="o">.</span><span class="n">set_grads_to_bp</span><span class="p">(</span><span class="n">batch_loss</span><span class="p">,</span> <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Perform the update.</span>
+            <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;forward&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">single_phase</span><span class="p">:</span>
+                <span class="n">optimizers</span><span class="p">[</span><span class="s1">&#39;feedback&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="c1">### Compute H loss.</span>
+        <span class="k">if</span>  <span class="nb">hasattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;save_lu_loss&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">save_lu_loss</span><span class="p">:</span>
+            <span class="n">epoch_loss_lu</span> <span class="o">+=</span> <span class="n">dfc</span><span class="o">.</span><span class="n">loss_function_H</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">shared</span><span class="p">)</span>
+
+        <span class="c1">### Store values.</span>
+        <span class="n">epoch_losses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch_loss</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">epoch_accs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch_accuracy</span><span class="p">)</span>
+
+        <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">batch_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">num_samples</span> <span class="o">+=</span> <span class="n">batch_size</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">test</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="c1"># Compute angles if needed.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">no_plots</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">save_df</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+            <span class="n">dfc</span><span class="o">.</span><span class="n">save_angles</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">batch_loss</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_H_angle</span><span class="p">:</span>
+                <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_lu_angle</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
+                    <span class="n">net</span><span class="o">.</span><span class="n">lu_angles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_condition_fb</span><span class="p">:</span>
+                <span class="n">gn_condition</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">compute_condition_two</span><span class="p">()</span>
+                <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">gn_condition</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gn_condition</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+    <span class="c1"># Save results in train_var.</span>
+    <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_loss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">epoch_losses</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+        <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_accu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">epoch_accs</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="s1">&#39;DFC&#39;</span> <span class="ow">in</span> <span class="n">network_type</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">save_lu_loss</span><span class="p">:</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_train_loss_lu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epoch_loss_lu</span><span class="o">/</span><span class="n">num_samples</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">compare_with_ndi</span><span class="p">:</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">rel_dist_to_ndi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">rel_dist_to_ndi</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">epoch_losses</span><span class="p">,</span> <span class="n">epoch_accs</span></div>
+
+<div class="viewcode-block" id="test"><a class="viewcode-back" href="../../utils.html#utils.train_utils.test">[docs]</a><span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">dloader</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span>
+         <span class="n">network_type</span><span class="p">,</span> <span class="n">data_split</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Test the network.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        (....): See docstring of function :func:`train`.</span>
+<span class="sd">        data_split (str): The test split to use: `test` or `validation`.</span>
+
+<span class="sd">    Return:</span>
+<span class="sd">        (....): Tuple containing:</span>
+
+<span class="sd">        - **test_loss**: The average test loss.</span>
+<span class="sd">        - **test_acc**: The average test accuracy. ``None`` for non</span>
+<span class="sd">            classification tasks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Chose the correct data split.</span>
+    <span class="k">if</span> <span class="n">data_split</span> <span class="o">==</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">dloader</span><span class="o">.</span><span class="n">test</span>
+    <span class="k">elif</span> <span class="n">data_split</span> <span class="o">==</span> <span class="s1">&#39;validation&#39;</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">dloader</span><span class="o">.</span><span class="n">val</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">test_loss</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">test_accu</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+            <span class="c1">### Compute loss and accuracy.</span>
+            <span class="n">test_loss</span> <span class="o">+=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+                <span class="n">test_accu</span> <span class="o">+=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">compute_accuracy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>      
+
+            <span class="n">num_samples</span> <span class="o">+=</span> <span class="n">batch_size</span>
+            
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">test</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="c1"># For auto-encoding runs, plot some reconstructions.</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="s1">&#39;mnist_autoencoder&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">no_plots</span><span class="p">:</span>
+        <span class="n">plt_utils</span><span class="o">.</span><span class="n">plot_auto_reconstructions</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">writer</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
+ 
+    <span class="c1"># Because we use mean reduction and the last batch might have</span>
+    <span class="c1"># different size, we multiply in each batch by the number of samples and</span>
+    <span class="c1"># redivide here by the total number.</span>
+    <span class="n">test_loss</span> <span class="o">/=</span> <span class="n">num_samples</span>
+    <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+        <span class="n">test_accu</span> <span class="o">/=</span> <span class="n">num_samples</span>
+
+    <span class="c1"># Save results in train_var.</span>
+    <span class="k">if</span> <span class="n">data_split</span> <span class="o">==</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span>
+        <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_loss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_loss</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_test_accu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_accu</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">data_split</span> <span class="o">==</span> <span class="s1">&#39;validation&#39;</span><span class="p">:</span>
+        <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_val_loss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_loss</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">shared</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="n">shared</span><span class="o">.</span><span class="n">train_var</span><span class="o">.</span><span class="n">epochs_val_accu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_accu</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">test_loss</span><span class="p">,</span> <span class="n">test_accu</span></div>
+
+
+<div class="viewcode-block" id="compute_accuracy"><a class="viewcode-back" href="../../utils.html#utils.train_utils.compute_accuracy">[docs]</a><span class="k">def</span> <span class="nf">compute_accuracy</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the average accuracy of the given predictions.</span>
+
+<span class="sd">    Inspired by</span>
+<span class="sd">    https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        predictions (torch.Tensor): Tensor containing the output of the linear</span>
+<span class="sd">            output layer of the network.</span>
+<span class="sd">        labels (torch.Tensor): Tensor containing the labels of the mini-batch.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (float): Average accuracy of the given predictions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># In case of one-hot-encodings, need to extract class.</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">pred_labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">predictions</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">correct</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_labels</span> <span class="o">==</span> <span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">correct</span><span class="o">/</span><span class="n">total</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dfc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents of the repository:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html">Main script to run experiments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main.html#reproducibility">Reproducibility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../datahandlers.html">Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../networks.html">Networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utilities</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Alexander Meulemans, Matilde Tristany Farinha, Maria R. Cervera.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
