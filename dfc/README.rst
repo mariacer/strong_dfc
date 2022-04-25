@@ -4,6 +4,8 @@ Deep Feedback Control code
 Running experiments
 -------------------
 
+Experiments have to be run for the different algorithms from the corresponding executable files. Datasets can be chosen through the command line option ``--dataset``.
+
 Deep Feedback Control runs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18,6 +20,15 @@ For running single-phase DFC (the forward and backward weights are trained simul
 .. code-block:: console
 
     $ python3 run_dfc_single_phase.py
+    
+Important options that you might want to use:
+
+- ``--strong_feedback``: Uses strong feedback influences instead of nudging the output towards lower loss.
+- ``--ss``: Only update forward weights at the steady state.
+- ``--ssa``: Only update forward weights at the steady state computed analytically.
+- ``--noisy_dynamics``: Add noise to the forward weight learning.
+
+For all remaining options, please refer to `args.py <utils/args.py>`
 
 Baselines
 ^^^^^^^^^
@@ -33,8 +44,3 @@ Direct Feedback Alignment experiments can be run as follows:
 .. code-block:: console
 
     $ python3 run_dfa.py
-
-Hyperparameter searches
------------------------
-
-For instructions on how to run hyperparameter searches refer to the README inside the ``hpsearch`` subfolder.
