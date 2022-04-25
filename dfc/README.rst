@@ -28,7 +28,7 @@ Important options that you might want to use:
 - ``--ssa``: Only update forward weights at the steady state computed analytically.
 - ``--noisy_dynamics``: Add noise to the forward weight learning.
 
-For all remaining options, please refer to `args.py <utils/args.py>`
+For all remaining options, please refer to :ref:`args.py <utils/args.py>`.
 
 Baselines
 ^^^^^^^^^
