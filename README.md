@@ -1,6 +1,6 @@
 # Deep Feedback Control
 
-Implementation of Deep Feedback Control and some extensions. The basis of this repository is a cleaned-up version of this 
+Implementation of [Deep Feedback Control (DFC)](https://papers.nips.cc/paper/2021/hash/25048eb6a33209cb5a815bff0cf6887c-Abstract.html) and [Strong-DFC](https://proceedings.mlr.press/v162/meulemans22a.html). The basis of this repository is a cleaned-up version of this 
 [public repository](https://github.com/meulemansalex/deep_feedback_control/tree/main).
 
 ## Requirements
